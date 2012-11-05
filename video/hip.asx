@@ -1,0 +1,51 @@
+lines	equ	90
+half equ main+$ffa
+scr	equ	half-lines*40
+smp	equ	half+$ec0 ; 64+248
+
+	org	main
+
+	sei
+	ldy	#1
+	sty	^4e
+	lda	#124
+	cmp:rne	^4b
+	mvx	smp	^4a
+	stx	^21
+	mva	#$22	^40 ;6
+	mwa	#dl	^42	;12
+	mva	#0	^12	;6
+	sta	^1a	;4
+	mva	#2	^13	;6
+	mva	#4	^14	;6
+	mva	#6	^15	;6
+	mva	#8	^16	;6
+	mva	#10	^17	;6
+	mva	#12	^18	;6
+	mva	#14	^19	;6
+blank
+	mvx	smp,y+	^4a
+	stx	^21
+	cpy	#64
+	bcc	blank
+
+	ldy	#0
+	lda	#mode
+line
+	eor	#$40^$80
+	mvx	smp+64,y+	^4a
+	stx	^21
+	sta	^1b
+	cpy	#248
+	bcc	line
+	rts
+
+dl	dta	$70,$70,$70,$50,$4f,a(scr)
+:lines-1	dta	$f
+	dta	$4f,a(scr+lines*40)
+:lines-1	dta	$f
+	dta	$41,a(dl)
+
+:main+$1ff4-*	dta	$ff
+
+	ini	main

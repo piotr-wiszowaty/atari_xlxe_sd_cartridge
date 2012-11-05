@@ -1,0 +1,73 @@
+adr	equ	$80
+
+	opt	h-f+
+	org	$bf00
+init
+	clc
+	rts
+main
+	mva	#$d6	adr
+	sta	$8001
+	mva	#$3c	adr+1
+	sta	$8002
+	mva	#$00	adr+2
+	sta	$8003
+	mva	#1	$8000
+	ldx	#reloc_len
+	mva:rne	reloc_src,x	reloc_dest,x-
+
+	lda	#124
+	cmp:rne	^4b
+	lda	#123
+	cmp:rne	^4b
+	jmp	play
+
+reloc_src
+	org	r:$3000
+reloc_dest
+play
+; start read A000
+	jsr	adr_next
+	mva	#$10	$8000
+; run 8000
+	lda	$9ffe
+	cmp	#6
+	bne	error
+	lda	$9fff
+	cmp	#$80
+	bne	error
+	jsr	$8006
+; start read 8000
+	jsr	adr_next
+	lda	#1	$8000
+; run A000
+	lda	$bffe
+	cmp	#6
+	bne	error
+	lda	$bfff
+	cmp	#$a0
+	bne	error
+	jsr	$a006
+	jmp	play
+
+error
+	mva	^4b	^1a
+	jmp	error
+
+adr_next
+	lda	#$20
+	add:sta	adr
+	sta	$8001
+	lda	#0
+	adc:sta	adr+1
+	sta	$8002
+	lda	#0
+	adc:sta	adr+2
+	sta	$8003
+	rts
+
+reloc_len	equ	*-reloc_dest
+
+	org	$bffa
+	dta	a(main),0,4,a(init)
+	end
