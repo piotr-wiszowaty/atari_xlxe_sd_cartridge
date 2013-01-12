@@ -1,3 +1,6 @@
+command	equ	$9ffc
+address	equ	$9ffd
+
 adr	equ	$80
 
 	opt	h-f+
@@ -7,14 +10,15 @@ init
 	rts
 main
 	mva	#$d6	adr
-	sta	$8001
+	sta	address
 	mva	#$3c	adr+1
-	sta	$8002
+	sta	address+1
 	mva	#$00	adr+2
-	sta	$8003
-	mva	#1	$8000
-	ldx	#reloc_len
-	mva:rne	reloc_src,x	reloc_dest,x-
+	sta	address+2
+	mva	#1	command
+
+	ldx	#reloc_len-1
+	mva:rpl	reloc_src,x	reloc_dest,x-
 
 	lda	#124
 	cmp:rne	^4b
@@ -28,26 +32,34 @@ reloc_dest
 play
 ; start read A000
 	jsr	adr_next
-	mva	#$10	$8000
+	mva	#$10	command
 ; run 8000
-	lda	$9ffe
+	lda	$8002
 	cmp	#6
 	bne	error
-	lda	$9fff
+	lda	$8003
 	cmp	#$80
 	bne	error
+stop1
 	jsr	$8006
+	lda	^1f
+	lsr	@
+	bcc	stop1
 ; start read 8000
 	jsr	adr_next
-	lda	#1	$8000
+	mva	#1	command
 ; run A000
-	lda	$bffe
+	lda	$a002
 	cmp	#6
 	bne	error
-	lda	$bfff
+	lda	$a003
 	cmp	#$a0
 	bne	error
+stop2
 	jsr	$a006
+	lda	^1f
+	lsr	@
+	bcc	stop2
 	jmp	play
 
 error
@@ -57,13 +69,13 @@ error
 adr_next
 	lda	#$20
 	add:sta	adr
-	sta	$8001
+	sta	address
 	lda	#0
 	adc:sta	adr+1
-	sta	$8002
+	sta	address+1
 	lda	#0
 	adc:sta	adr+2
-	sta	$8003
+	sta	address+2
 	rts
 
 reloc_len	equ	*-reloc_dest
