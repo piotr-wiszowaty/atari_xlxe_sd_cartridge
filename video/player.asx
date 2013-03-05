@@ -9,6 +9,7 @@ init
 	clc
 	rts
 main
+	sei
 	mva	#$d6	adr
 	sta	address
 	mva	#$3c	adr+1
@@ -16,6 +17,7 @@ main
 	mva	#$00	adr+2
 	sta	address+2
 	mva	#1	command
+	sta	^4e
 
 	ldx	#reloc_len-1
 	mva:rpl	reloc_src,x	reloc_dest,x-
@@ -31,42 +33,6 @@ reloc_src
 reloc_dest
 play
 ; start read A000
-	jsr	adr_next
-	mva	#$10	command
-; run 8000
-	lda	$8002
-	cmp	#6
-	bne	error
-	lda	$8003
-	cmp	#$80
-	bne	error
-stop1
-	jsr	$8006
-	lda	^1f
-	lsr	@
-	bcc	stop1
-; start read 8000
-	jsr	adr_next
-	mva	#1	command
-; run A000
-	lda	$a002
-	cmp	#6
-	bne	error
-	lda	$a003
-	cmp	#$a0
-	bne	error
-stop2
-	jsr	$a006
-	lda	^1f
-	lsr	@
-	bcc	stop2
-	jmp	play
-
-error
-	mva	^4b	^1a
-	jmp	error
-
-adr_next
 	lda	#$20
 	add:sta	adr
 	sta	address
@@ -76,7 +42,47 @@ adr_next
 	lda	#0
 	adc:sta	adr+2
 	sta	address+2
-	rts
+	mva	#$10	command
+; run 8000
+;	lda	$8002
+;	cmp	#6
+;	bne	error
+;	lda	$8003
+;	cmp	#$80
+;	bne	error
+stop1
+	jsr	$8006+4
+;	lda	^1f
+;	lsr	@
+;	bcc	stop1
+; start read 8000
+	lda	#$20
+	add:sta	adr
+	sta	address
+	lda	#0
+	adc:sta	adr+1
+	sta	address+1
+	lda	#0
+	adc:sta	adr+2
+	sta	address+2
+	mva	#1	command
+; run A000
+;	lda	$a002
+;	cmp	#6
+;	bne	error
+;	lda	$a003
+;	cmp	#$a0
+;	bne	error
+stop2
+	jsr	$a006+4
+;	lda	^1f
+;	lsr	@
+;	bcc	stop2
+	jmp	play
+
+;error
+;	mva	^4b	^1a
+;	jmp	error
 
 reloc_len	equ	*-reloc_dest
 

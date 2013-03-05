@@ -6,16 +6,15 @@ smp	equ	half+$ec0 ; 64+248
 	org	main
 
 	sei
-	ldy	#1
-	sty	^4e
+	inc	^4e
 	lda	#124
 	cmp:rne	^4b
 	mvx	smp	^4a
 	stx	^21
 	mva	#$22	^40 ;6
 	mwa	#dl	^42	;12
-	mva	#0	^12	;6
-	sta	^1a	;4
+	mvy	#1	^12	;6
+	sty	^1a	;4
 	mva	#2	^13	;6
 	mva	#4	^14	;6
 	mva	#6	^15	;6
@@ -29,15 +28,14 @@ blank
 	cpy	#64
 	bcc	blank
 
-	ldy	#0
+	ldy	#256-248
 	lda	#mode
 line
 	eor	#$40^$80
-	mvx	smp+64,y+	^4a
+	mvx	smp+312-256,y+	^4a
 	stx	^21
 	sta	^1b
-	cpy	#248
-	bcc	line
+	bne	line
 	rts
 
 dl	dta	$70,$70,$70,$50,$4f,a(scr)
