@@ -1,0 +1,74 @@
+v 20110619 2
+P 900 2300 600 2300 1 0 0
+{
+T 900 2300 5 10 0 0 0 0 1
+pintype=unknown
+T 545 2295 5 10 1 1 0 6 1
+pinlabel=VCC
+T 695 2345 5 10 1 1 0 0 1
+pinnumber=1
+T 900 2300 5 10 0 0 0 0 1
+pinseq=1
+}
+P 900 1900 600 1900 1 0 0
+{
+T 900 1900 5 10 0 0 0 0 1
+pintype=unknown
+T 545 1895 5 10 1 1 0 6 1
+pinlabel=GND
+T 695 1945 5 10 1 1 0 0 1
+pinnumber=2
+T 900 1900 5 10 0 0 0 0 1
+pinseq=2
+}
+P 900 1500 600 1500 1 0 0
+{
+T 900 1500 5 10 0 0 0 0 1
+pintype=unknown
+T 545 1495 5 10 1 1 0 6 1
+pinlabel=TCK
+T 695 1545 5 10 1 1 0 0 1
+pinnumber=3
+T 900 1500 5 10 0 0 0 0 1
+pinseq=3
+}
+P 900 1100 600 1100 1 0 0
+{
+T 900 1100 5 10 0 0 0 0 1
+pintype=unknown
+T 545 1095 5 10 1 1 0 6 1
+pinlabel=TDO
+T 695 1145 5 10 1 1 0 0 1
+pinnumber=4
+T 900 1100 5 10 0 0 0 0 1
+pinseq=4
+}
+P 900 700 600 700 1 0 0
+{
+T 900 700 5 10 0 0 0 0 1
+pintype=unknown
+T 545 695 5 10 1 1 0 6 1
+pinlabel=TDI
+T 695 745 5 10 1 1 0 0 1
+pinnumber=5
+T 900 700 5 10 0 0 0 0 1
+pinseq=5
+}
+P 900 300 600 300 1 0 0
+{
+T 900 300 5 10 0 0 0 0 1
+pintype=unknown
+T 545 295 5 10 1 1 0 6 1
+pinlabel=TMS
+T 695 345 5 10 1 1 0 0 1
+pinnumber=6
+T 900 300 5 10 0 0 0 0 1
+pinseq=6
+}
+B 0 0 600 2600 3 0 0 0 -1 -1 0 -1 -1 -1 -1 -1
+T 0 2700 8 10 1 1 0 0 1
+device=Xilinx_JTAG
+T 0 2900 8 10 1 1 0 0 1
+refdes=CONN?
+T 0 3100 8 10 0 0 0 0 1
+footprint=JUMPER6
