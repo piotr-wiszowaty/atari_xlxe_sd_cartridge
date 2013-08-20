@@ -161,7 +161,12 @@ Sources
 -------
 
 `bootstrap/` - Atari bootstrap sources
+
 `cpld/`      - MMU design files
+
 `pcb/`       - PCB design files (gEDA) and gerbers
+
 `tools/`     - programs to control the microcontroller through UART interface
+
 `uc/`        - microcontroller firmware sources
+
