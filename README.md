@@ -15,8 +15,8 @@ Atari-side interface
 Memory region `$bff8..$bfff` is dedicated to SD card read/write control. This
 region is not overwritten by SD card read operation. The rest of the cartridge
 memory region (`$8000..$bff7`) works as normal RAM (from the Atari side).
-Every read/write operates on SD card sectors `<SECTOR_NUM>`..`<SECTOR_NUM>` + `<SECTOR_COUNT>`
-and RAM region `$8000`..`$8000` + `512` * `<OFFSET>`.
+Every read/write operates on SD card sectors `<SECTOR_NUM>..<SECTOR_NUM>+<SECTOR_COUNT>`
+and RAM region `$8000..$8000+512*<OFFSET>`.
 
 `$bff8` :
 
