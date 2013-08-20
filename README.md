@@ -15,36 +15,46 @@ Atari-side interface
 Memory region `$bff8..$bfff` is dedicated to SD card read/write control. This
 region is not overwritten by SD card read operation. The rest of the cartridge
 memory region (`$8000..$bff7`) works as normal RAM (from the Atari side).
+Every read/write operates on SD card sectors `<SECTOR_NUM>`..`<SECTOR_NUM>` + `<SECTOR_COUNT>`
+and RAM region `$8000`..`$8000` + `512` * `<OFFSET>`.
 
 `$bff8` :
-  bit0=1     - operation: read sectors from SD card into RAM
-  bit1=1     - operation: write data from RAM to SD card
-  bit2=1     - last operation successful
-  bit3=1     - last operation failed
-  bit7..bit4 - unused
+
+* bit0=1     - read sectors from SD card into buffer RAM
+* bit1=1     - write data from buffer RAM to SD card
+* bit2=1     - flag: last operation successful
+* bit3=1     - flag: last operation failed
+* bit7..bit4 - unused
 
 `$bff9` :
-  bit4..bit0 - OFFSET; data offset from `$8000`; measured in 512-byte blocks
-  bit7..bit5 - unused
+
+* bit4..bit0 - `<OFFSET>`; data offset from `$8000`; measured in 512-byte blocks
+* bit7..bit5 - unused
 
 `$bffa` :
-  bit5..bit0 - `<SECTOR_COUNT>`; number of 512-byte sectors to read/write
-  bit7..bit6 - unused
+
+* bit5..bit0 - `<SECTOR_COUNT>`; number of 512-byte sectors to read/write
+* bit7..bit6 - unused
 
 `$bffb` :
-  bit7..bit0 - `<SECTOR_NUM>` bits 7..0; SD card sector number bits 7..0
+
+* bit7..bit0 - `<SECTOR_NUM>` bits 7..0
 
 `$bffc` :
-  bit7..bit0 - `<SECTOR_NUM>` bits 15..8; SD card sector number bits 15..8
+
+* bit7..bit0 - `<SECTOR_NUM>` bits 15..8
 
 `$bffd` :
-  bit7..bit0 - `<SECTOR_NUM>` bits 23..16; SD card sector number bits 23..16
+
+* bit7..bit0 - `<SECTOR_NUM>` bits 23..16
 
 `$bffe` :
-  unused
+
+* unused
 
 `$bfff` :
-  unused
+
+* unused
 
 Example usage
 -------------
