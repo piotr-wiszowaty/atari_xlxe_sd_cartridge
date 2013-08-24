@@ -20,8 +20,8 @@ and RAM region `$8000+512*<OFFSET>..$8000+512*(<OFFSET>+<SECTOR_COUNT>)-1`.
 
 `$bff8` :
 
-* bit0=1     - read sectors from SD card into buffer RAM
-* bit1=1     - write data from buffer RAM to SD card
+* bit0=1     - read sectors from SD card into buffer RAM; reset by microcontroller after read is completed
+* bit1=1     - write data from buffer RAM to SD card; reset by microcontroller after write is completed
 * bit2=1     - flag: last operation succeeded
 * bit3=1     - flag: last operation failed
 * bit7..bit4 - unused
