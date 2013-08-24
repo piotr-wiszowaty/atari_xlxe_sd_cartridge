@@ -2,9 +2,9 @@ Atari XL/XE SD cartridge
 ========================
 
 Atari XL/XE SD cartridge is a device allowing access (read and write) to SD
-cards by and Atari 8-bit computers.
+cards by [Atari 8-bit computers](http://en.wikipedia.org/wiki/Atari_8-bit_family).
 
-Access is performed through a buffer memory accessible at address range
+Access is performed through buffer memory accessible at address range
 `$8000..$bfff`. SD card communication is done by a microcontroller. Access to
 the buffer RAM by Atari and the microcontroller is arbitered by a dedicated
 MMU.
@@ -13,8 +13,8 @@ Atari-side interface
 --------------------
 
 Memory region `$bff8..$bfff` is dedicated to SD card read/write control. This
-region is not overwritten by SD card read operation. The rest of the cartridge
-memory region (`$8000..$bff7`) works as normal RAM (from the Atari side).
+region is never overwritten by SD card read operations. The rest of the cartridge
+memory region (`$8000..$bff7`) is seen from the Atari as regular RAM.
 Every read/write operates on SD card sectors `<SECTOR_NUM>..<SECTOR_NUM>+<SECTOR_COUNT>`
 and RAM region `$8000..$8000+512*<OFFSET>`.
 
@@ -22,7 +22,7 @@ and RAM region `$8000..$8000+512*<OFFSET>`.
 
 * bit0=1     - read sectors from SD card into buffer RAM
 * bit1=1     - write data from buffer RAM to SD card
-* bit2=1     - flag: last operation successful
+* bit2=1     - flag: last operation succeeded
 * bit3=1     - flag: last operation failed
 * bit7..bit4 - unused
 
@@ -131,8 +131,8 @@ Connectors:
 * SWD connector for programming/debugging the microcontroller
 * JTAG connector for programming the CPLD
 * UART connector (5V) for communication PC-microcontroller; may also be used for microcontroller flash programming
-* debug connector with two pins connected to the CPLD, and two pins connected to both CPLD and microcontroller
-* SPI header (for debugging communication between microcontroller and SD card)
+* debug connector with two pins connected to the CPLD, and two pins connected to both the CPLD and the microcontroller
+* SPI header (for debugging communication between the microcontroller and the SD card)
 
 LED indicators:
 
@@ -146,8 +146,8 @@ Boot algorithm:
 
 1. Write & verify Atari bootstrap code to buffer RAM at `$bf00`
 2. Initialize SD card
-3. Find Atari executable file boot.xex on SD card
-4. Wait for Atari to set bytes `$bff8` to `$a0` and `$bff9` to `$a5`
+3. Find Atari executable file boot.xex on the SD card
+4. Wait for the Atari to set bytes `$bff8` to `$a0` and `$bff9` to `$a5`
 5. Write boot.xex first sector number to buffer RAM at `$bffb..$bffd`
 6. Change bootstrap instruction in buffer RAM at `$bf0d` from BCC to BCS
 
