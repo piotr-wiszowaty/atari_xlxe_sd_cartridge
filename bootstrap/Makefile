@@ -4,7 +4,7 @@ HDRS = player.h
 all: $(HDRS)
 
 %.obx: %.asx
-	xasm /o:$@ $^
+	xasm /o:$@ $<
 
 %.h: %.obx
 	./bin2h $^ | sed -e 's/char array/char bootstrap/' > $@
