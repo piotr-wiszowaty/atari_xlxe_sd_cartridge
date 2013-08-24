@@ -359,80 +359,82 @@ int main()
 		DATA_IN;
 		command = ram_read();
 		if (command & 0x01) {		 // read sector(s)?
-			LPC_TMR32B0->TCR = 1;
-
 			READ_CMD_PARAMS;
+			if (n_sectors) {
+				LPC_TMR32B0->TCR = 1;
 
-			if (active_read_sector != 0 && active_read_sector != sector) {
-				sdmmc_stop_transmission();
-			}
-			result = 0;
-			if (active_read_sector == 0 || active_read_sector != sector) {
-				result = sdmmc_read_multiple_blocks_start(sector);
-			}
-			if (result) {
+				if (active_read_sector != 0 && active_read_sector != sector) {
+					sdmmc_stop_transmission();
+				}
+				result = 0;
+				if (active_read_sector == 0 || active_read_sector != sector) {
+					result = sdmmc_read_multiple_blocks_start(sector);
+				}
+				if (result) {
+					ram_set_address(0xbff8);
+					ram_write(0x08);
+					active_read_sector = 0;
+					sdmmc_stop_transmission();
+					continue;
+				} else {
+					active_read_sector = sector + n_sectors;
+				}
+
+				write_address = 0x8000 + (sector_offset << 9);
+				ram_set_address(write_address);
+
+				for (i = 0; i < n_sectors; i++,write_address+=512) {
+					transfer_sector_to_ram((write_address == 0xc000 - 512) ? (512 - 8) : 512);
+					if (i == 0) {
+						t_1st = LPC_TMR32B0->TC;
+					} else if (i == 1) {
+						t_2nd = LPC_TMR32B0->TC;
+					}
+				}
+				t_total = LPC_TMR32B0->TC;
+
 				ram_set_address(0xbff8);
-				ram_write(0x08);
-				active_read_sector = 0;
-				sdmmc_stop_transmission();
-				continue;
-			} else {
-				active_read_sector = sector + n_sectors;
-			}
+				if (result) {
+					ram_write(0x08);
+				} else {
+					ram_write(0x04);
+				}
 
-			write_address = 0x8000 + (sector_offset << 9);
-			ram_set_address(write_address);
+				LPC_TMR32B0->TCR = 2;
 
-			for (i = 0; i < n_sectors; i++,write_address+=512) {
-				transfer_sector_to_ram((write_address == 0xc000 - 512) ? (512 - 8) : 512);
-				if (i == 0) {
-					t_1st = LPC_TMR32B0->TC;
-				} else if (i == 1) {
-					t_2nd = LPC_TMR32B0->TC;
+				if (t_total > 20000 || result) {
+					RED_LED_ON;
+				} else {
+					RED_LED_OFF;
+				}
+
+				if (t_1st > max_t_1st) {
+					max_t_1st = t_1st;
+				}
+				if (t_2nd > max_t_2nd) {
+					max_t_2nd = t_2nd;
+				}
+				if (t_total > max_t_total) {
+					max_t_total = t_total;
 				}
 			}
-			t_total = LPC_TMR32B0->TC;
-
-			ram_set_address(0xbff8);
-			if (result) {
-				ram_write(0x08);
-			} else {
-				ram_write(0x04);
-			}
-
-			LPC_TMR32B0->TCR = 2;
-
-			if (t_total > 20000 || result) {
-				RED_LED_ON;
-			} else {
-				RED_LED_OFF;
-			}
-
-			if (t_1st > max_t_1st) {
-				max_t_1st = t_1st;
-			}
-			if (t_2nd > max_t_2nd) {
-				max_t_2nd = t_2nd;
-			}
-			if (t_total > max_t_total) {
-				max_t_total = t_total;
-			}
-		} else if (command & 0x02) {
-			if (active_read_sector) {
-				active_read_sector = 0;
-				sdmmc_stop_transmission();
-			}
-
+		} else if (command & 0x02) {	// write sector(s)?
 			READ_CMD_PARAMS;
+			if (n_sectors) {
+				if (active_read_sector) {
+					active_read_sector = 0;
+					sdmmc_stop_transmission();
+				}
 
-			ram_set_address(0x8000 + (sector_offset << 9));
-			DATA_IN;
-			result = sdmmc_write_multiple_blocks(sector, n_sectors, ram_read);
-			ram_set_address(0xbff8);
-			if (result < 0) {
-				ram_write(0x08);
-			} else {
-				ram_write(0x04);
+				ram_set_address(0x8000 + (sector_offset << 9));
+				DATA_IN;
+				result = sdmmc_write_multiple_blocks(sector, n_sectors, ram_read);
+				ram_set_address(0xbff8);
+				if (result < 0) {
+					ram_write(0x08);
+				} else {
+					ram_write(0x04);
+				}
 			}
 		}
 	}
