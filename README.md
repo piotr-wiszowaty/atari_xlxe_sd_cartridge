@@ -154,11 +154,29 @@ Boot algorithm:
 Main loop:
 
 1. Execute command received through UART (if any):
-   * `e` - echo
-   * `t` - send last and maximum read times
-   * `r` - send N bytes starting at address A from buffer RAM
-   * `w` - write N bytes received through UART to buffer RAM starting
-           at address A
+   * echo
+     UART --> microcontroller `'e'`
+     UART <-- microcontroller `'e'`
+
+   * read data from buffer RAM (`A`, `N` - 16-bit little endian numbers)
+     UART --> microcontroller `'r'`
+     UART --> microcontroller `A`
+     UART --> microcontroller `N`
+     UART <-- microcontroller `buffer_ram[A]`
+     UART <-- microcontroller `buffer_ram[A+1]`
+     ...
+     UART <-- microcontroller `buffer_ram[A+N-1]`
+
+   * write data to buffer RAM (`A`, `N` - 16-bit little endian numbers)
+     UART --> microcontroller `'w'`
+     UART --> microcontroller `A`
+     UART --> microcontroller `N`
+     UART --> microcontroller `buffer_ram[A]`
+     UART --> microcontroller `buffer_ram[A+1]`
+     ...
+     UART --> microcontroller `buffer_ram[A+N-1]`
+     UART <-- microcontroller `'w'`
+
 2. Execute operation read from buffer RAM at `$bff8`:
    * bit0=1 - read `<SECTOR_COUNT>` 512-byte sectors starting at sector `<SECTOR_NUM>`
               from SD card into buffer RAM at address `$8000+512*<OFFSET>`
