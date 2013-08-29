@@ -2660,8 +2660,6 @@ Layer(1 "component")
 	Line[104.7873mm 46.4914mm 106.5437mm 44.7350mm 10.00mil 20.00mil "clearline"]
 	Line[106.5437mm 42.1950mm 105.0438mm 42.1950mm 10.00mil 20.00mil "clearline"]
 	Line[99.4534mm 34.8828mm 101.7715mm 34.8828mm 10.00mil 20.00mil "clearline"]
-	Text[2138.00mil 84.3521mm 0 100 "(c) 2013 pwi" "clearline"]
-	Text[54.3047mm 3418.00mil 0 100 "p.5v4 rev.1.1" "clearline"]
 )
 Layer(2 "solder")
 (
@@ -2758,6 +2756,7 @@ Layer(2 "solder")
 	Line[93.5897mm 84.0809mm 93.5897mm 78.2389mm 10.00mil 20.00mil "clearline"]
 	Line[95.9607mm 68.2479mm 95.9607mm 75.8679mm 10.00mil 20.00mil "clearline"]
 	Line[95.9607mm 75.8679mm 93.5897mm 78.2389mm 10.00mil 20.00mil "clearline"]
+	Text[46.8517mm 87.8651mm 0 100 "Atari XL/XE SD Cartridge" "clearline,onsolder"]
 	Polygon("clearpoly")
 	(
 		[89.0177mm 20.3269mm] [107.3057mm 20.3269mm] [107.8137mm 20.8349mm] [107.8137mm 24.1369mm] [89.0177mm 24.1369mm] 
