@@ -142,7 +142,7 @@ uint32_t fat_find_first_sector(char *filename)
 	sectors_per_cluster = bpb->sectors_per_cluster;
 	reserved_sectors_count = bpb->reserved_sectors_count;
 	fat_start = part0_first_sector + reserved_sectors_count;
-	first_data_sector = fat_start + (fat_size << 1);
+	first_data_sector = fat_start + bpb->num_fats * fat_size;
 
 	if (sdmmc_read_block(first_data_sector, buf) < 0) {
 		return 0;
@@ -154,7 +154,7 @@ uint32_t fat_find_first_sector(char *filename)
 		if (dir_entries[i].name[0] != 0xe5) {
 			if (fat_equ_filename(filename, (char *) &(dir_entries[i].name))) {
 				cluster = ((uint32_t) dir_entries[i].fst_clus_hi << 16) | (uint32_t) dir_entries[i].fst_clus_lo;
-				return first_data_sector + cluster * sectors_per_cluster;
+				return first_data_sector + (cluster - 2) * sectors_per_cluster;
 			}
 		}
 		i++;
