@@ -1,7 +1,7 @@
 OBXS = player.obx
 HDRS = player.h
 
-all: $(HDRS)
+all: $(HDRS) test.obx
 
 %.obx: %.asx
 	xasm /o:$@ $<

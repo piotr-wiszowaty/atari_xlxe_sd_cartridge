@@ -1,0 +1,46 @@
+ptr	equ	$80
+
+	opt	h-f+
+	org	$8000
+	nop
+	nop
+	nop
+	nop
+	nop
+	nop
+	nop
+	nop
+	nop
+	nop
+	mwa	$230	ptr
+	ldy	#4
+	mva	<screen	(ptr),y+
+	mva	>screen	(ptr),y
+loop	jmp	loop
+
+	;	  0123456789012345678901234567890123456789
+screen	dta	d'+---                                ---+'
+	dta	d'|                                      |'
+	dta	d'|                                      |'
+	dta	d'|                                      |'
+	dta	d'                                        '
+	dta	d'                                        '
+	dta	d'                                        '
+	dta	d'                                        '
+	dta	d'                                        '
+	dta	d'                                        '
+	dta	d'                                        '
+	dta	d'              foo bar baz               '
+	dta	d'                                        '
+	dta	d'                                        '
+	dta	d'                                        '
+	dta	d'                                        '
+	dta	d'                                        '
+	dta	d'                                        '
+	dta	d'                                        '
+	dta	d'                                        '
+	dta	d'|                                      |'
+	dta	d'|                                      |'
+	dta	d'|                                      |'
+	dta	d'+---                                ---+'
+	end
