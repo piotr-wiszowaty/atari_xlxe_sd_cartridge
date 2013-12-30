@@ -21,6 +21,13 @@
 #include "fat.h"
 #include "bootstrap.h"
 
+#define OFFSET_D5E8		0x35e8
+#define OFFSET_8000		0x4000
+#define OFFSET_A000		0x6000
+#define OFFSET_BOOTSTRAP (OFFSET_A000 + 8192 - 256)
+#define CART_SIZE		16384
+#define TOTAL_CART_SECTORS 32
+
 #define EN_TIMER16_0	(1 << 7)
 #define EN_TIMER16_1	(1 << 8)
 #define EN_TIMER32_0	(1 << 9)
@@ -77,14 +84,14 @@
 #define DATA_IN			LPC_GPIO2->DIR &= ~DATA
 #define DATA_OUT		LPC_GPIO2->DIR |= DATA
 
-#define READ_CMD_PARAMS	\
+#define FETCH_CMD_PARAMS	\
 	sector_offset = ram_read() & 0x1f;	\
-	n_sectors = ram_read() & 0x3f;		\
+	n_sectors = ram_read() & 0x1f;		\
 	sector = ram_read();				\
 	sector |= (int) ram_read() << 8;	\
 	sector |= (int) ram_read() << 16
 
-extern void transfer_sector_to_ram(int n_bytes);
+extern void transfer_sector_to_ram();
 
 void blinking_panic()
 {
@@ -200,6 +207,16 @@ unsigned char ram_read()
 	return c;
 }
 
+void clean_d5()
+{
+	int i;
+
+	ram_set_address(OFFSET_D5E8);
+	for (i = 0; i < 8; i++) {
+		ram_write(0);
+	}
+}
+
 int main()
 {
 	int i;
@@ -217,7 +234,6 @@ int main()
 	int max_t_2nd = 0;
 	int max_t_total = 0;
 	int active_read_sector = 0;
-	int write_address;
 	int result;
 
 	LPC_SYSCON->SYSAHBCLKCTRL |= EN_IOCON | EN_SSP | EN_UART | EN_TIMER32_0;
@@ -271,13 +287,15 @@ int main()
 	LPC_SYSCON->CLKOUTUEN = 1;
 	LPC_IOCON->PIO0_1 = 0xc1;				// CLKO
 
+	clean_d5();
+
 	// write bootstrap code to RAM
-	ram_set_address(0xbf00);
+	ram_set_address(OFFSET_BOOTSTRAP);
 	for (i = 0; i < 256; i++) {
 		ram_write(bootstrap[i]);
 	}
 	// verify written bootstrap
-	ram_set_address(0xbf00);
+	ram_set_address(OFFSET_BOOTSTRAP);
 	DATA_IN;
 	for (i = 0; i < 256; i++) {
 		if ((c = ram_read()) != bootstrap[i]) {
@@ -305,18 +323,20 @@ int main()
 
 	// wait until bootstrap code is executed by Atari
 	do {
-		ram_set_address(0xbff8);
+		ram_set_address(OFFSET_D5E8);
 		DATA_IN;
 	} while (ram_read() != 0xa0 || ram_read() != 0xa5);
 
+	clean_d5();
+
 	// initialize sector-number-to-load in RAM
-	ram_set_address(0xbffb);
+	ram_set_address(OFFSET_D5E8 + 3);
 	ram_write((sector >>  0) & 0xff);
 	ram_write((sector >>  8) & 0xff);
 	ram_write((sector >> 16) & 0xff);
 
 	// change instruction: BCC to BCS
-	ram_set_address(0xbf0d);
+	ram_set_address(OFFSET_BOOTSTRAP + 0x0d);
 	ram_write(0xb0);
 
 	while (1) {
@@ -355,11 +375,11 @@ int main()
 			}
 		}
 
-		ram_set_address(0xbff8);
+		ram_set_address(OFFSET_D5E8);
 		DATA_IN;
 		command = ram_read();
 		if (command & 0x01) {		 // read sector(s)?
-			READ_CMD_PARAMS;
+			FETCH_CMD_PARAMS;
 			if (n_sectors) {
 				LPC_TMR32B0->TCR = 1;
 
@@ -371,7 +391,7 @@ int main()
 					result = sdmmc_read_multiple_blocks_start(sector);
 				}
 				if (result) {
-					ram_set_address(0xbff8);
+					ram_set_address(OFFSET_D5E8);
 					ram_write(0x08);
 					active_read_sector = 0;
 					sdmmc_stop_transmission();
@@ -380,11 +400,13 @@ int main()
 					active_read_sector = sector + n_sectors;
 				}
 
-				write_address = 0x8000 + (sector_offset << 9);
-				ram_set_address(write_address);
+				ram_set_address(OFFSET_8000 + (sector_offset << 9));
 
-				for (i = 0; i < n_sectors; i++,write_address+=512) {
-					transfer_sector_to_ram((write_address == 0xc000 - 512) ? (512 - 8) : 512);
+				for (i = 0; i < n_sectors; i++) {
+					if (sector_offset + i >= TOTAL_CART_SECTORS) {
+						ram_set_address(OFFSET_8000);
+					}
+					transfer_sector_to_ram();
 					if (i == 0) {
 						t_1st = LPC_TMR32B0->TC;
 					} else if (i == 1) {
@@ -393,7 +415,7 @@ int main()
 				}
 				t_total = LPC_TMR32B0->TC;
 
-				ram_set_address(0xbff8);
+				ram_set_address(OFFSET_D5E8);
 				if (result) {
 					ram_write(0x08);
 				} else {
@@ -419,17 +441,28 @@ int main()
 				}
 			}
 		} else if (command & 0x02) {	// write sector(s)?
-			READ_CMD_PARAMS;
+			FETCH_CMD_PARAMS;
 			if (n_sectors) {
 				if (active_read_sector) {
 					active_read_sector = 0;
 					sdmmc_stop_transmission();
 				}
 
-				ram_set_address(0x8000 + (sector_offset << 9));
+				ram_set_address(OFFSET_8000 + (sector_offset << 9));
 				DATA_IN;
-				result = sdmmc_write_multiple_blocks(sector, n_sectors, ram_read);
-				ram_set_address(0xbff8);
+				if (sector_offset + n_sectors > TOTAL_CART_SECTORS) {
+					// write 2 chunks of sectors
+					result = sdmmc_write_multiple_blocks(sector, TOTAL_CART_SECTORS - sector_offset, ram_read);
+					if (!result) {
+						ram_set_address(OFFSET_8000);
+						DATA_IN;
+						result = sdmmc_write_multiple_blocks(sector, n_sectors - (TOTAL_CART_SECTORS - sector_offset), ram_read);
+					}
+				} else {
+					// write 1 chunk of sectors
+					result = sdmmc_write_multiple_blocks(sector, n_sectors, ram_read);
+				}
+				ram_set_address(OFFSET_D5E8);
 				if (result < 0) {
 					ram_write(0x08);
 				} else {

@@ -1,7 +1,7 @@
-command	equ	$bff8
-sec_offs equ	$bff9
-sec_cnt	equ	$bffa
-sec_num	equ	$bffb
+command	equ	$d5e8
+sec_offs equ	$d5e9
+sec_cnt	equ	$d5ea
+sec_num	equ	$d5eb
 
 	opt	h-f+
 	org	$bf00

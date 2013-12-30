@@ -38,9 +38,9 @@
 	str	r6, [r4]
 .endm
 
-.macro	add1hi	reg
+.macro	sub1	reg
 	mov	r0, \reg
-	add	r0, #1
+	sub	r0, #1
 	mov	\reg, r0
 .endm
 
@@ -66,43 +66,27 @@ transfer_sector_to_ram:
 	mov	r4, r11
 	push	{r4-r7}
 
-	mov	r10, r0			// n_bytes
-
 	ldr	r3, ssp0_sr
 	ldr	r4, ssp0_dr
 	ldr	r5, rne_mask
 	ldr	r6, minus1
 	ldr	r7, zero
 
-	ldr	r0, zero
-	mov	r8, r0			// byte counter
+	mov	r0, #0xfe
+	mov	r8, r0
 	ldr	r0, sector_size
 	mov	r9, r0
-	mov	r0, #0xfe
-	mov	r11, r0
-
-// ldr r1,=carcass
-// ldr r0,[r1]
-// ldr r1,=tmp
-// str r0,[r1]
 
 	str_h	[r4]
 data_token_loop:
 	waitrne
 	spirxtx
-	cmp	r0, r11
+	cmp	r0, r8
 	bne	data_token_loop
 
 transfer_loop:
 	waitrne
 	spirxtx
-	cmp	r8, r10
-	bge	next_byte
-// ldr r1,=tmp
-// ldr r0,[r1]
-// mov r2,#8
-// ror r0,r2
-// str r0,[r1]
 	ldr	r1, io_data
 	str	r0, [r1]
 	ldr	r1, write
@@ -117,8 +101,7 @@ write_loop:
 	str_h	[r0]
 	str_l	[r0]
 next_byte:
-	add1hi	r8
-	cmp	r8, r9
+	sub1	r9
 	bne	transfer_loop
 
 	// skip CRC
@@ -147,12 +130,8 @@ io_data:  .word 0x50000000 + 0x20000 + (0xff << 2)
 write:    .word 0x50000000 + 0x10000 + (WRITE << 2)
 ack:      .word 0x50000000 + 0x30000 + (ACK << 2)
 strobe_a: .word 0x50000000 + 0x00000 + (STROBE_ADDR << 2)
-//carcass:  .word 0xbeaddeef
 
 max_sectors: .word 16
 sector_size: .word 512
-
-//	.bss
-//tmp:	.space	4
 
 	.end

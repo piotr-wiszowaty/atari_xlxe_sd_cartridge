@@ -4,21 +4,20 @@ Atari XL/XE SD cartridge
 Atari XL/XE SD cartridge is a device allowing access (read and write) to SD
 cards by [Atari 8-bit computers](http://en.wikipedia.org/wiki/Atari_8-bit_family).
 
-Access is performed through buffer memory accessible at address range
-`$8000..$bfff`. SD card communication is done by a microcontroller. Access to
-the buffer RAM by Atari and the microcontroller is arbitered by a dedicated
-MMU.
+Access is performed through buffer RAM accessible at address range
+`$8000..$bfff` and 8 control registers at `$d5e8..$d5ef`. SD card communication
+is done by a microcontroller. Access to the buffer RAM by Atari and the
+microcontroller is arbitered by a dedicated MMU.
 
 Atari-side interface
 --------------------
 
-Memory region `$bff8..$bfff` is dedicated to SD card read/write control. This
-region is never overwritten by SD card read operations. The rest of the cartridge
-memory region (`$8000..$bff7`) is seen from the Atari as regular RAM.
-Every read/write operates on SD card sectors `<SECTOR_NUM>..<SECTOR_NUM>+<SECTOR_COUNT>-1`
-and RAM region `$8000+512*<OFFSET>..$8000+512*(<OFFSET>+<SECTOR_COUNT>)-1`.
+Memory region `$8000..$bfff` is seen from the Atari as regular RAM - both
+readable and writable by Atari. Every read/write operates on SD card sectors
+`<SECTOR_NUM>..<SECTOR_NUM>+<SECTOR_COUNT>-1` and RAM region 
+`$8000+512*<OFFSET>..$8000+512*(<OFFSET>+<SECTOR_COUNT>)-1`.
 
-`$bff8` :
+`$d5e8` :
 
 * bit0=1     - read sectors from SD card into buffer RAM; reset by microcontroller after read is completed
 * bit1=1     - write data from buffer RAM to SD card; reset by microcontroller after write is completed
@@ -26,33 +25,33 @@ and RAM region `$8000+512*<OFFSET>..$8000+512*(<OFFSET>+<SECTOR_COUNT>)-1`.
 * bit3=1     - flag: last operation failed
 * bit7..bit4 - unused
 
-`$bff9` :
+`$d5e9` :
 
 * bit4..bit0 - `<OFFSET>`; data offset from `$8000`; measured in 512-byte blocks
 * bit7..bit5 - unused
 
-`$bffa` :
+`$d5ea` :
 
 * bit5..bit0 - `<SECTOR_COUNT>`; number of 512-byte sectors to read/write
 * bit7..bit6 - unused
 
-`$bffb` :
+`$d5eb` :
 
 * bit7..bit0 - `<SECTOR_NUM>` bits 7..0
 
-`$bffc` :
+`$d5ec` :
 
 * bit7..bit0 - `<SECTOR_NUM>` bits 15..8
 
-`$bffd` :
+`$d5ed` :
 
 * bit7..bit0 - `<SECTOR_NUM>` bits 23..16
 
-`$bffe` :
+`$d5ee` :
 
 * unused
 
-`$bfff` :
+`$d5ef` :
 
 * unused
 
@@ -66,24 +65,24 @@ Example usage
  ; into buffer RAM starting at $8600 and wait for the
  ; operation to complete
  lda #$56
- sta $bffb
+ sta $d5eb
  lda #$34
- sta $bffc
+ sta $d5ec
  lda #$12
- sta $bffd
+ sta $d5ed
  lda #3
- sta $bff9
+ sta $d5e9
  lda #10
- sta $bffa
+ sta $d5ea
  lda #1
- sta $bff8
+ sta $d5e8
  lda #$0c
 wait
  lda #$04
- bit $bff8
+ bit $d5e8
  bne ok
  lda #$08
- bit $bff8
+ bit $d5e8
  bne error
  jmp wait
 </code></pre>
@@ -95,23 +94,23 @@ wait
  ; with data in buffer RAM starting at $a000 and wait for the
  ; operation to complete
  lda #$54
- sta $bffb
+ sta $d5eb
  lda #$76
- sta $bffc
+ sta $d5ec
  lda #$98
- sta $bffd
+ sta $d5ed
  lda #16
- sta $bff9
+ sta $d5e9
  lda #7
- sta $bffa
+ sta $d5ea
  lda #2
- sta $bff8
+ sta $d5e8
 wait
  lda #$04
- bit $bff8
+ bit $d5e8
  bne ok
  lda #$08
- bit $bff8
+ bit $d5e8
  bne error
  jmp wait
 </code></pre>
@@ -121,7 +120,7 @@ Hardware
 
 Main silicon components:
 
-* buffer RAM - 32 kB of 55 ns SRAM (16 kB of which are actually used)
+* buffer RAM - 32 kB of 55 ns SRAM (16 kB + 256 B of which are actually used)
 * ARM Cortex-M0 microcontroller (NXP LPC1114)
 * MMU controlling access to SRAM from microcontroller and Atari (Xilinx XC95144XL CPLD)
 
@@ -147,8 +146,8 @@ Boot algorithm:
 1. Write & verify Atari bootstrap code to buffer RAM at `$bf00`
 2. Initialize SD card
 3. Find Atari executable file boot.xex on the SD card
-4. Wait for the Atari to set bytes `$bff8` to `$a0` and `$bff9` to `$a5`
-5. Write boot.xex first sector number to buffer RAM at `$bffb..$bffd`
+4. Wait for the Atari to set bytes `$d5e8` to `$a0` and `$d5e9` to `$a5`
+5. Write boot.xex first sector number to buffer RAM at `$d5eb..$d5ed`
 6. Change bootstrap instruction in buffer RAM at `$bf0d` from BCC to BCS
 
 Main loop:
@@ -177,13 +176,12 @@ Main loop:
      UART --> microcontroller `buffer_ram[A+N-1]`
      UART <-- microcontroller `'w'`
 
-2. Execute operation read from buffer RAM at `$bff8`:
+2. Execute operation read from register at `$d5e8`:
    * bit0=1 - read `<SECTOR_COUNT>` 512-byte sectors starting at sector `<SECTOR_NUM>`
               from SD card into buffer RAM at address `$8000+512*<OFFSET>`
    * bit1=1 - write `<SECTOR_COUNT>` 512-byte sectors from buffer RAM
               at `$8000+512*<OFFSET>` to SD card starting at sector `<SECTOR_NUM>`
-   After operation is finished set success and error flags at `$bff8` in buffer
-   RAM accordingly.
+   After operation is finished set success and error flags in register at `$d5e8`.
 
 Sources
 -------

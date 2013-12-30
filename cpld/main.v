@@ -18,12 +18,12 @@
 
 module main(
     input cart_fi2,
-    output cart_fi2_copy,
-    input fi2,
+    /*output cart_fi2_copy,*/
+    /*input fi2,*/
     input cart_s4,
     input cart_s5,
     input cart_rw,
-    /*input cart_cctl,*/
+    input cart_cctl,
     input [12:0] cart_addr,
     inout [7:0] cart_data,
     output ram_oe,
@@ -48,6 +48,8 @@ module main(
     output dbg1);
 
 wire cart_select;
+wire cart_ram_select;
+wire cart_d5_select;
 wire fi2_falling;
 wire fi2_rising;
 
@@ -58,41 +60,55 @@ reg state_uc_read = 0;
 reg [1:0] phase = 2'b01;
 
 reg [1:0] fi2_r = 2'b00;
+reg s4_r = 1;
+reg s5_r = 1;
+reg rw_r = 1;
+reg cctl_r = 1;
 
 reg [7:0] cart_out_data_latch;
 
-reg [13:0] uc_addr = 0;
+reg [14:0] uc_addr = 0;
 reg [7:0] uc_out_data_latch = 0;
 
 reg cart_write_enable = 0;
 
-assign cart_fi2_copy = cart_fi2;
+//assign cart_fi2_copy = cart_fi2;
 
 assign fi2_falling = fi2_r[1] & ~fi2_r[0];
 assign fi2_rising = ~fi2_r[1] & fi2_r[0];
 
-assign cart_select = cart_s4 ^ cart_s5;
+assign cart_ram_select = s4_r ^ s5_r;
+assign cart_d5_select = ~cctl_r & (cart_addr[7:3] == 5'b11101);  // D5E8-D5EF
+assign cart_select = cart_ram_select | cart_d5_select;
 
-assign cart_data = (cart_select & cart_rw) ? cart_out_data_latch : 8'hzz;
+assign cart_data = (cart_select & cart_rw & cart_fi2) ? cart_out_data_latch : 8'hzz;
 
-assign ram_addr = (state_cart_write | state_cart_read) ? {1'b0, cart_s4, cart_addr} :
-                  {1'b0, uc_addr};
+assign ram_addr = (state_cart_write | state_cart_read) ? {cctl_r, s4_r, cart_addr} :
+                  uc_addr;
 assign ram_data = state_cart_write ? cart_data :
                   state_uc_write ? uc_data :
                   8'hzz;
 
 assign uc_data = uc_read ? uc_out_data_latch : 8'hzz;
 
-always @(posedge strobe_addr)
+always @(posedge strobe_addr) begin
     if (set_addr_lo)
         uc_addr[7:0] <= uc_data;
     else if (set_addr_hi)
-        uc_addr[13:8] <= uc_data[5:0];
+        uc_addr[14:8] <= uc_data[6:0];
     else
         uc_addr <= uc_addr + 1;
+end
+
+always @(posedge cart_fi2) begin
+    s4_r <= cart_s4;
+    s5_r <= cart_s5;
+    rw_r <= cart_rw;
+    cctl_r <= cart_cctl;
+end
 
 always @(posedge clk) begin
-    fi2_r <= {fi2_r[0], fi2};
+    fi2_r <= {fi2_r[0], cart_fi2};
     
     if (state_cart_write | state_cart_read | state_uc_write | state_uc_read)
         case (phase)
@@ -105,9 +121,9 @@ always @(posedge clk) begin
     case ({state_cart_write, state_cart_read, state_uc_write, state_uc_read})
         // idle
         4'b0000:
-            if (fi2_rising & ~cart_rw & cart_select)
+            if (fi2_rising & ~rw_r & cart_select)
                 state_cart_write <= 1;
-            else if (fi2_rising & cart_rw & cart_select)
+            else if (fi2_rising & rw_r & cart_select)
                 state_cart_read <= 1;
             else if (fi2_falling & uc_write & ~uc_ack)
                 state_uc_write <= 1;

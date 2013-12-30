@@ -22,12 +22,12 @@ net "cart_data<6>" loc = p55;
 net "cart_data<7>" loc = p61;
 
 net "cart_fi2" loc = p49;
-net "cart_fi2_copy" loc = p28;
-net "fi2" loc = p27;
+#net "cart_fi2_copy" loc = p28;
+#net "fi2" loc = p27;
 net "cart_rw" loc = p46;
 net "cart_s4" loc = p80;
 net "cart_s5" loc = p53;
-#net "cart_cctl" loc = p50;
+net "cart_cctl" loc = p50;
 net "ram_oe" loc = p92;
 net "ram_we" loc = p81;
 
@@ -85,10 +85,8 @@ net "dbg1" loc = p42;
 NET "clk" TNM_NET = clk;
 TIMESPEC TSPEC_clk = PERIOD "clk" 48 MHz HIGH 50%;
 
-NET "cart_fi2" TNM_NET = fi2;
+NET "cart_fi2" TNM_NET = cart_fi2;
 TIMESPEC TS_cart_fi2 = PERIOD "cart_fi2" 562 ns HIGH 250 ns;
 
 NET "strobe_addr" TNM_NET = strobe_addr;
 TIMESPEC TSPEC_strobe_addr = PERIOD "strobe_addr" 40 ns HIGH 20 ns;
-#Created by Constraints Editor (xc95144xl-tq100-10) - 2013/08/15
-NET "cart_fi2" TNM_NET = cart_fi2;
