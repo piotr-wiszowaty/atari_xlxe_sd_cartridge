@@ -8,7 +8,7 @@ Atari-side interface
 --------------------
 
 The cartridge occupies address space `$8000..$BFFF`. Read and write operations
-are controlled through 8 registers mapped to `$D5E8-$D5EF`. Each read/write
+are controlled through 8 registers mapped to `$D5E8..$D5EF`. Each read/write
 operates on SD card sectors `<SECTOR_NUM>..<SECTOR_NUM>+<SECTOR_COUNT>-1` and
 RAM region `$8000+512*<OFFSET>..$8000+512*(<OFFSET>+<SECTOR_COUNT>)-1`.
 
