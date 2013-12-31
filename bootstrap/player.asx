@@ -9,11 +9,6 @@ init
 	clc
 	rts
 main
-	mva	#$a0	command
-	mva	#$a5	command+1
-	clc
-w8_fat	bcc	w8_fat
-
 	mva	#$00	sec_offs
 	mva	#16	sec_cnt
 	mva	#$01	command

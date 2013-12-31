@@ -321,23 +321,11 @@ int main()
 		PANIC;
 	}
 
-	// wait until bootstrap code is executed by Atari
-	do {
-		ram_set_address(OFFSET_D5E8);
-		DATA_IN;
-	} while (ram_read() != 0xa0 || ram_read() != 0xa5);
-
-	clean_d5();
-
 	// initialize sector-number-to-load in RAM
 	ram_set_address(OFFSET_D5E8 + 3);
 	ram_write((sector >>  0) & 0xff);
 	ram_write((sector >>  8) & 0xff);
 	ram_write((sector >> 16) & 0xff);
-
-	// change instruction: BCC to BCS
-	ram_set_address(OFFSET_BOOTSTRAP + 0x0d);
-	ram_write(0xb0);
 
 	while (1) {
 		if ((c = rx()) > -1) {

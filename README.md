@@ -1,8 +1,8 @@
 Atari XL/XE SD cartridge
 ========================
 
-Atari XL/XE SD cartridge is a device allowing access (read and write) to SD
-cards by [Atari 8-bit computers](http://en.wikipedia.org/wiki/Atari_8-bit_family).
+Atari XL/XE SD cartridge is a device allowing access (read and write) to FAT32 formatted
+SD cards by [Atari 8-bit computers](http://en.wikipedia.org/wiki/Atari_8-bit_family).
 
 Atari-side interface
 --------------------
@@ -138,12 +138,11 @@ Software (microcontroller)
 
 Boot algorithm:
 
-1. Write & verify Atari bootstrap code to buffer RAM at `$BF00`
+1. Write Atari bootstrap code to buffer RAM at `$BF00`
 2. Initialize SD card
 3. Find Atari executable file boot.xex on the SD card
-4. Wait for the Atari to set bytes `$D5E8` to `$A0` and `$D5E9` to `$A5`
-5. Write boot.xex first sector number to buffer RAM at `$D5EB..$D5ED`
-6. Change bootstrap instruction in buffer RAM at `$BF0D` from BCC to BCS
+4. Write boot.xex first sector number to buffer RAM at `$D5EB..$D5ED`
+5. Execute main loop
 
 Main loop:
 
