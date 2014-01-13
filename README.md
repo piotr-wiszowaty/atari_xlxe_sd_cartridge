@@ -73,13 +73,11 @@ Example usage
  sta $D5E8
  lda #$0C
 wait
- lda #$04
  bit $D5E8
- bne ok
+ beq wait
  lda #$08
  bit $D5E8
  bne error
- jmp wait
 </code></pre>
 
 ### Write
@@ -100,14 +98,13 @@ wait
  sta $D5EA
  lda #2
  sta $D5E8
+ lda #$0C
 wait
- lda #$04
  bit $D5E8
- bne ok
+ beq wait
  lda #$08
  bit $D5E8
  bne error
- jmp wait
 </code></pre>
 
 Hardware
