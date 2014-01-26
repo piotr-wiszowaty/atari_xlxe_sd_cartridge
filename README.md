@@ -71,12 +71,12 @@ Example usage
  sta $D5EA
  lda #1
  sta $D5E8
- lda #$0C
+ lda #$C0
 wait
  bit $D5E8
- bvs ok
+ beq wait
  bmi error
- jmp wait
+ok
 </code></pre>
 
 ### Write
@@ -97,11 +97,12 @@ wait
  sta $D5EA
  lda #2
  sta $D5E8
+ lda #$C0
 wait
  bit $D5E8
- bvs ok
+ beq wait
  bmi error
- jmp wait
+ok
 </code></pre>
 
 Hardware
