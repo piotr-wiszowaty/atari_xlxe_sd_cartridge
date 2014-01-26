@@ -84,6 +84,11 @@
 #define DATA_IN			LPC_GPIO2->DIR &= ~DATA
 #define DATA_OUT		LPC_GPIO2->DIR |= DATA
 
+#define CMD_BIT_READ	0x01
+#define CMD_BIT_WRITE	0x02
+#define CMD_BIT_SUCCESS	0x40
+#define CMD_BIT_FAILURE	0x80
+
 #define FETCH_CMD_PARAMS	\
 	sector_offset = ram_read() & 0x1f;	\
 	n_sectors = ram_read() & 0x1f;		\
@@ -366,7 +371,7 @@ int main()
 		ram_set_address(OFFSET_D5E8);
 		DATA_IN;
 		command = ram_read();
-		if (command & 0x01) {		 // read sector(s)?
+		if (command & CMD_BIT_READ) {		 // read sector(s)?
 			FETCH_CMD_PARAMS;
 			if (n_sectors) {
 				LPC_TMR32B0->TCR = 1;
@@ -380,7 +385,7 @@ int main()
 				}
 				if (result) {
 					ram_set_address(OFFSET_D5E8);
-					ram_write(0x08);
+					ram_write(CMD_BIT_FAILURE);
 					active_read_sector = 0;
 					sdmmc_stop_transmission();
 					continue;
@@ -404,15 +409,11 @@ int main()
 				t_total = LPC_TMR32B0->TC;
 
 				ram_set_address(OFFSET_D5E8);
-				if (result) {
-					ram_write(0x08);
-				} else {
-					ram_write(0x04);
-				}
+				ram_write(CMD_BIT_SUCCESS);
 
 				LPC_TMR32B0->TCR = 2;
 
-				if (t_total > 20000 || result) {
+				if (t_total > 20000) {
 					RED_LED_ON;
 				} else {
 					RED_LED_OFF;
@@ -428,7 +429,7 @@ int main()
 					max_t_total = t_total;
 				}
 			}
-		} else if (command & 0x02) {	// write sector(s)?
+		} else if (command & CMD_BIT_WRITE) {	// write sector(s)?
 			FETCH_CMD_PARAMS;
 			if (n_sectors) {
 				if (active_read_sector) {
@@ -452,9 +453,9 @@ int main()
 				}
 				ram_set_address(OFFSET_D5E8);
 				if (result < 0) {
-					ram_write(0x08);
+					ram_write(CMD_BIT_FAILURE);
 				} else {
-					ram_write(0x04);
+					ram_write(CMD_BIT_SUCCESS);
 				}
 			}
 		}

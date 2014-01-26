@@ -16,9 +16,9 @@ RAM region `$8000+512*<OFFSET>..$8000+512*(<OFFSET>+<SECTOR_COUNT>)-1`.
 
 * bit0=1     - read sectors from SD card into buffer RAM; reset after the operation is completed
 * bit1=1     - write data from buffer RAM to SD card; reset after the operation is completed
-* bit2=1     - flag: last operation succeeded
-* bit3=1     - flag: last operation failed
-* bit7..bit4 - unused
+* bit5..bit2 - unused
+* bit6=1     - flag: last operation succeeded
+* bit7=1     - flag: last operation failed
 
 `$D5E9` :
 
@@ -73,12 +73,9 @@ Example usage
  sta $D5E8
  lda #$0C
 wait
- lda #$04
  bit $D5E8
- bne ok
- lda #$08
- bit $D5E8
- bne error
+ bvs ok
+ bmi error
  jmp wait
 </code></pre>
 
@@ -101,12 +98,9 @@ wait
  lda #2
  sta $D5E8
 wait
- lda #$04
  bit $D5E8
- bne ok
- lda #$08
- bit $D5E8
- bne error
+ bvs ok
+ bmi error
  jmp wait
 </code></pre>
 
