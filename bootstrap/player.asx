@@ -44,7 +44,8 @@ play
 ; start read 8000
 	lda	#$10
 	add:sta	sec_num
-	lda	#0
+	lda	^1f
+	eor	#7
 	adc:sta	sec_num+1
 	lda	#0
 	sta	sec_offs
