@@ -85,15 +85,16 @@ static void smp(unsigned char *p, FILE *audio)
 	memset(buf, 0x80, sizeof(buf));
 	fread(buf, 1, sizeof(buf), audio);
 	for (i = 0; i < 312; i++) {
-		int s = (buf[i] - 0x80) * 4 + 0x78;
-		if (s < 0)
-			s = 0;
-		else if (s > 255)
-			s = 255;
+		int s = buf[i];
 		if (smp_min > s)
 			smp_min = s;
 		if (smp_max < s)
 			smp_max = s;
+		s = (s - 0x80) * 4 + 0x70 + (rand() & 0xf);
+		if (s < 0)
+			s = 0;
+		else if (s > 255)
+			s = 255;
 		*p++ = (s >> 4) | 0xf0;
 	}
 }
@@ -137,7 +138,8 @@ int main(int argc, char *argv[])
 			puts("ERROR");
 			return 1;
 		}
-		printf("Frame %d\n", ++frame);
+		if (++frame % 100 == 0)
+			printf("Frame %d\n", frame);
 #if 0
 		if (frame == 400) {
 			ascii(buf + 6, 160, 90);
