@@ -37,7 +37,7 @@ play
 	lda	#0
 	adc:sta	sec_num+2
 	mva	#$10	sec_offs
-	mva	#16	sec_cnt
+	sta	sec_cnt
 	mva	#$01	command
 ; run 8000
 	jsr	$8006+4
@@ -47,8 +47,8 @@ play
 	lda	#0
 	adc:sta	sec_num+1
 	lda	#0
+	sta	sec_offs
 	adc:sta	sec_num+2
-	mva	#$00	sec_offs
 	mva	#16	sec_cnt
 	mva	#$01	command
 ; run A000
