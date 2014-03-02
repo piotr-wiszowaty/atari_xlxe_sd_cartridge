@@ -44,7 +44,7 @@ RAM region `$8000+512*<OFFSET>..$8000+512*(<OFFSET>+<SECTOR_COUNT>)-1`.
 
 `$D5EE` :
 
-* unused
+* bit7..bit0 - `<SECTOR_NUM>` bits 31..24
 
 `$D5EF` :
 
@@ -56,7 +56,7 @@ Example usage
 ### Read
 
 <pre><code>
- ; read 10 consecutive sectors from SD card starting from $123456
+ ; read 10 consecutive sectors from SD card starting from $00123456
  ; into buffer RAM starting at $8600 and wait for the
  ; operation to complete
  lda #$56
@@ -65,6 +65,8 @@ Example usage
  sta $D5EC
  lda #$12
  sta $D5ED
+ lda #$00
+ sta $D5EE
  lda #3
  sta $D5E9
  lda #10
@@ -82,7 +84,7 @@ ok
 ### Write
 
 <pre><code>
- ; fill 7 consecutive sectors on SD card starting from $987654
+ ; fill 7 consecutive sectors on SD card starting from $00987654
  ; with data in buffer RAM starting at $a000 and wait for the
  ; operation to complete
  lda #$54
@@ -91,6 +93,8 @@ ok
  sta $D5EC
  lda #$98
  sta $D5ED
+ lda #$00
+ sta $D5EE
  lda #16
  sta $D5E9
  lda #7

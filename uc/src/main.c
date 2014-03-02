@@ -94,7 +94,8 @@
 	n_sectors = ram_read() & 0x1f;		\
 	sector = ram_read();				\
 	sector |= (int) ram_read() << 8;	\
-	sector |= (int) ram_read() << 16
+	sector |= (int) ram_read() << 16;	\
+	sector |= (int) ram_read() << 24
 
 extern void transfer_sector_to_ram();
 
@@ -212,7 +213,7 @@ unsigned char ram_read()
 	return c;
 }
 
-void clean_d5()
+void clear_d5()
 {
 	int i;
 
@@ -227,10 +228,10 @@ int main()
 	int i;
 	int n;
 	int c;
-	int sector = 0;
-	int command;
-	int n_sectors;
-	int sector_offset;
+	uint32_t sector = 0;
+	uint32_t command;
+	uint32_t n_sectors;
+	uint32_t sector_offset;
 	int uart_div;
 	int t_1st;
 	int t_2nd;
@@ -238,7 +239,7 @@ int main()
 	int max_t_1st = 0;
 	int max_t_2nd = 0;
 	int max_t_total = 0;
-	int active_read_sector = 0;
+	uint32_t active_read_sector = 0;
 	int result;
 
 	LPC_SYSCON->SYSAHBCLKCTRL |= EN_IOCON | EN_SSP | EN_UART | EN_TIMER32_0;
@@ -292,7 +293,7 @@ int main()
 	LPC_SYSCON->CLKOUTUEN = 1;
 	LPC_IOCON->PIO0_1 = 0xc1;				// CLKO
 
-	clean_d5();
+	clear_d5();
 
 	// write bootstrap code to RAM
 	ram_set_address(OFFSET_BOOTSTRAP);
@@ -331,10 +332,15 @@ int main()
 	ram_write((sector >>  0) & 0xff);
 	ram_write((sector >>  8) & 0xff);
 	ram_write((sector >> 16) & 0xff);
+	ram_write((sector >> 24) & 0xff);
 
 	while (1) {
 		if ((c = rx()) > -1) {
 			switch (c) {
+				case 'a':
+					tx('a');
+					tx_int(active_read_sector);
+					break;
 				case 'e':
 					tx('e');
 					break;
