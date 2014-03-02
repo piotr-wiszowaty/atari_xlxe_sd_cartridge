@@ -1,10 +1,10 @@
-OBXS = player.obx
+OBXS = player.obx boot.obx test.obx
 HDRS = player.h
 
-all: $(HDRS) test.obx
+all: $(HDRS) $(OBXS)
 
 %.obx: %.asx
-	xasm /o:$@ $<
+	xasm /o:$@ /l:$@.lst $<
 
 %.h: %.obx
 	./bin2h $^ | sed -e 's/char array/char bootstrap/' > $@

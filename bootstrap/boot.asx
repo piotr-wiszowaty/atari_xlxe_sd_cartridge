@@ -1,0 +1,584 @@
+show_fat equ 0
+
+ptr	equ	$80
+dentry	equ	$82
+cursor	equ	$84
+
+screen	equ	$7000
+sec_buf	equ	$9000
+
+command	 equ	$d5e8
+sec_offs equ	$d5e9
+sec_cnt	 equ	$d5ea
+sec_num	 equ	$d5eb
+
+; master boot record
+mbr_pi	equ	$1be
+
+; partition info record
+pi_active	 equ $00
+pi_start_head	 equ $01
+pi_start_cyl_sec equ $02
+pi_fs_type	 equ $04
+pi_end_head	 equ $05
+pi_end_cyl_sec	 equ $06
+pi_first_sector	 equ $08
+pi_size		 equ $0c
+
+; BPB record
+bpb_bytes_per_sector equ $0b
+bpb_secs_per_clus    equ $0d
+bpb_reserved_secs    equ $0e
+bpb_fat_copies	     equ $10
+bpb_root_dir_entries equ $11
+bpb_num_secs	     equ $13
+bpb_media_type	     equ $15
+bpb_fat16_size       equ $16
+bpb_secs_per_track   equ $18
+bpb_num_heads	     equ $1a
+bpb_hidden_secs	     equ $1c
+bpb_total_secs32     equ $20
+bpb_fat32_size	     equ $24
+
+; FAT directory entry
+direntry_name	     equ $00
+direntry_fst_clus_hi equ $14
+direntry_fst_clus_lo equ $1a
+direntry_size	     equ 32
+
+	opt	h-f+
+	org	$8000
+:10	nop
+
+start
+	mwa	$230	ptr
+	ldy	#4
+	mva	<screen	(ptr),y+
+	mva	>screen	(ptr),y
+
+	ift	show_fat
+	mwa	#screen	cursor
+	mwa	#msg1	ptr
+	jsr	putstr
+	eif
+
+	; wait for loading $a000-$bfff to complete
+	jsr	w8_cart_read
+
+	ift	show_fat
+	mwa	#[screen+40]	cursor
+	mwa	#msg2	ptr
+	jsr	putstr
+	eif
+
+	; read sector MBR
+	lda	#$00
+	sta	sec_num
+	sta	sec_num+1
+	sta	sec_num+2
+	sta	sec_num+3
+	mva	#$08	sec_offs
+	mva	#$01	sec_cnt
+	sta	command
+	jsr	w8_cart_read
+
+	ift	show_fat
+	mwa	#[screen+80]	cursor
+	mwa	#msg3	ptr
+	jsr	putstr
+	lda	#0
+	jsr	putchar
+	eif
+
+	; save filesystem type
+	lda	sec_buf+mbr_pi+pi_fs_type
+	sta	fs_type
+	ift	show_fat
+	; display filesystem type
+	jsr	puthex
+	eif
+
+	; save partition 0 first sector number
+	mva	sec_buf+mbr_pi+pi_first_sector   part0_1st_sec
+	mva	sec_buf+mbr_pi+pi_first_sector+1 part0_1st_sec+1
+	mva	sec_buf+mbr_pi+pi_first_sector+2 part0_1st_sec+2
+	mva	sec_buf+mbr_pi+pi_first_sector+3 part0_1st_sec+3
+
+	ift	show_fat
+	; display partition 0 first sector
+	lda	#0
+	jsr	putchar
+	lda	part0_1st_sec+3
+	jsr	puthex
+	lda	part0_1st_sec+2
+	jsr	puthex
+	lda	part0_1st_sec+1
+	jsr	puthex
+	lda	part0_1st_sec
+	jsr	puthex
+	eif
+
+	; read partition 0 first sector
+	mva	part0_1st_sec	sec_num
+	mva	part0_1st_sec+1	sec_num+1
+	mva	part0_1st_sec+2	sec_num+2
+	mva	part0_1st_sec+3	sec_num+3
+	mva	#$01	command
+	jsr	w8_cart_read
+
+	ift	show_fat
+	mwa	#[screen+120]	cursor
+	mwa	#msg4	ptr
+	jsr	putstr
+	eif
+
+	; save FAT size
+	lda	fs_type
+	cmp	#$06
+	beq	fat16_size
+	cmp	#$0b
+	beq	fat32_size
+	ift	show_fat
+	jsr	clear_screen
+	eif
+	mwa	#screen	cursor
+	mwa	#msg5	ptr
+	jsr	putstr
+	jmp	*
+fat16_size
+	mwa	sec_buf+bpb_fat16_size	fat_size
+	jmp	fat_size_done
+fat32_size
+	mva	sec_buf+bpb_fat32_size		fat_size
+	mva	sec_buf+bpb_fat32_size+1	fat_size+1
+	mva	sec_buf+bpb_fat32_size+2	fat_size+2
+	mva	sec_buf+bpb_fat32_size+3	fat_size+3
+fat_size_done
+
+	; save sectors per cluster number
+	mva	sec_buf+bpb_secs_per_clus	secs_per_clus
+
+	; fat_start := part0_first_sector + reserved_sectors_number
+	lda	part0_1st_sec
+	add	sec_buf+bpb_reserved_secs
+	sta	fat_start
+	lda	part0_1st_sec+1
+	adc	sec_buf+bpb_reserved_secs+1
+	sta	fat_start+1
+	lda	part0_1st_sec+2
+	adc	#0
+	sta	fat_start+2
+
+	; first_data_sector := fat_copies*fat_size + fat_start 
+	mva	fat_size	mul0
+	mva	fat_size+1	mul0+1
+	mva	fat_size+2	mul0+2
+	mva	fat_size+3	mul0+3
+	lda	sec_buf+bpb_fat_copies
+	jsr	mul_8_32
+	lda	mul_res
+	add	fat_start
+	sta	fst_data_sec
+	lda	mul_res+1
+	adc	fat_start+1
+	sta	fst_data_sec+1
+	lda	mul_res+2
+	adc	fat_start+2
+	sta	fst_data_sec+2
+	lda	mul_res+3
+	adc	fat_start+3
+	sta	fst_data_sec+3
+
+	ift	show_fat
+
+	; display fat_copies
+	lda	#0
+	jsr	putchar
+	lda	sec_buf+bpb_fat_copies
+	jsr	puthex
+
+	; display FAT size
+	lda	#0
+	jsr	putchar
+	lda	fat_size+1
+	jsr	puthex
+	lda	fat_size
+	jsr	puthex
+
+	; display FAT start
+	lda	#0
+	jsr	putchar
+	lda	fat_start+1
+	jsr	puthex
+	lda	fat_start
+	jsr	puthex
+
+	; display 1st data sector
+	lda	#0
+	jsr	putchar
+	lda	fst_data_sec+1
+	jsr	puthex
+	lda	fst_data_sec
+	jsr	puthex
+
+	eif
+
+	; read directory entries
+	mva	fst_data_sec	sec_num
+	mva	fst_data_sec+1	sec_num+1
+	mva	fst_data_sec+2	sec_num+2
+	mva	fst_data_sec+3	sec_num+3
+	mva	#$08	sec_cnt
+	mva	#$01	command
+	jsr	w8_cart_read
+
+	ift	show_fat
+
+	; wait for Start key press & release
+	mwa	#[screen+200]	cursor
+	mwa	#msg6	ptr
+	jsr	putstr
+w8_key_start
+	jsr	scan_keys
+	lda	#$01
+	bit	keys
+	beq	w8_key_start
+
+	; clear screen (40*24 = 960 = $3c0)
+	jsr	clear_screen
+
+	eif
+
+	; scan & display directory entries (only files with 'XEX' extension)
+	mwa	#[screen+1]	ptr
+	mwa	#sec_buf	dentry
+de_loop	ldy	#0
+	lda	(dentry),y
+	beq	de_done
+	cmp	#$e5
+	beq	de_next
+	ldy	#8
+	lda	(dentry),y+
+	cmp	#$58
+	bne	de_next
+	lda	(dentry),y+
+	cmp	#$45
+	bne	de_next
+	lda	(dentry),y
+	cmp	#$58
+	bne	de_next
+	ldx	#11
+	ldy	#0
+de_print_name_loop
+	lda	(dentry),y
+	jsr	atascii2internal
+	sta	(ptr),y+
+	dex
+	bne	de_print_name_loop
+	lda	#40
+	add:sta	ptr
+	lda	#0
+	adc:sta	ptr+1
+	ldx	total_direntries
+	lda	direntry_index
+	sta	direntry_indexes,x
+	inx
+	stx	total_direntries
+de_next	lda	#direntry_size
+	add:sta	dentry
+	lda	#0
+	adc:sta	dentry+1
+	ldx	direntry_index
+	inx
+	stx	direntry_index
+	jmp	de_loop
+de_done
+
+	mwa	#[screen+40*23]	cursor
+	mwa	#msg7	ptr
+	jsr	putstr
+
+	mva	#$7f	screen
+select_loop
+	jsr	scan_keys
+	lda	#$01
+	bit	keys
+	bne	selected
+	lda	#$02
+	bit	keys
+	beq	select_loop
+	lda	#0
+	jsr	draw_selector
+	ldx	direntry_select
+	inx
+	cpx	total_direntries
+	bne	skip_rewind
+	ldx	#0
+skip_rewind
+	stx	direntry_select
+	lda	#$7f
+	jsr	draw_selector
+	jmp	select_loop
+selected
+	lda	#$ff
+	jsr	draw_selector
+
+	; calculate selected file's first sector and setup D5 registers
+	mva	#direntry_size	mul0
+	mva	#0	mul0+1
+	sta	mul0+2
+	sta	mul0+3
+	ldx	direntry_select
+	lda	direntry_indexes,x
+	jsr	mul_8_32
+	lda	mul_res
+	add	#<sec_buf
+	sta	dentry
+	lda	mul_res+1
+	adc	#>sec_buf
+	sta	dentry+1
+	ldy	#direntry_fst_clus_lo
+	lda	(dentry),y+
+	sub	#2
+	sta	mul0
+	lda	(dentry),y
+	sbc	#0
+	sta	mul0+1
+	ldy	#direntry_fst_clus_hi
+	lda	(dentry),y+
+	sbc	#0
+	sta	mul0+2
+	lda	(dentry),y
+	sbc	#0
+	sta	mul0+3
+	lda	secs_per_clus
+	jsr	mul_8_32
+	lda	mul_res
+	add	fst_data_sec
+	sta	sec_num
+	lda	mul_res+1
+	adc	fst_data_sec+1
+	sta	sec_num+1
+	lda	mul_res+2
+	adc	fst_data_sec+2
+	sta	sec_num+2
+	lda	mul_res+3
+	adc	fst_data_sec+3
+	sta	sec_num+3
+
+	lda	sec_num
+	sub	#$10
+	sta	sec_num
+	lda	sec_num+1
+	sbc	#0
+	sta	sec_num+1
+	lda	sec_num+2
+	sbc	#0
+	sta	sec_num+2
+	lda	sec_num+3
+	sbc	#0
+	sta	sec_num+3
+
+	rts
+; ------
+clear_screen
+	mwa	#[screen-$40]	ptr
+	ldy	#$40
+	ldx	#4
+cls
+	lda	#0
+cls_chunk
+	sta	(ptr),y+
+	bne	cls_chunk
+	lda	#$01
+	add:sta	ptr+1
+	dex
+	bne	cls
+
+	rts
+; ------
+draw_selector
+	pha
+	mva	#40	mul0
+	mva	#0	mul0+1
+	sta	mul0+2
+	sta	mul0+3
+	lda	direntry_select
+	jsr	mul_8_32
+	lda	mul_res
+	add	#<screen
+	sta	ptr
+	lda	mul_res+1
+	adc	#>screen
+	sta	ptr+1
+	ldy	#0
+	pla
+	sta	(ptr),y
+	rts
+; ------
+atascii2internal
+	cmp	#$20
+	bcs	range_1
+range_0	add	#$40
+	rts
+range_1	cmp	#$60
+	bcs	range_2
+	sub	#$20
+	rts
+range_2	cmp	#$80
+	bcs	range_3
+	rts
+range_3	cmp	#$a0
+	bcs	range_4
+	add	#$30
+	rts
+range_4	cmp	#$e0
+	bcs	range_5
+	rts
+range_5	sub	#$10
+	rts
+; ------
+scan_keys
+	lda	^1f
+	tax
+	eor	prev_consol
+	and	prev_consol
+	sta	keys
+	stx	prev_consol
+	rts
+; ------
+w8_cart_read
+	lda	#$c0
+w8_cart_read_loop
+	bit	command
+	beq	w8_cart_read_loop
+	bmi	error
+	rts
+; ------
+error
+	mva	^4b	^1a
+	jmp	error
+; ------
+; mul_res := a * mul0
+mul_8_32
+	ldx	#0
+	stx	mul_res
+	stx	mul_res+1
+	stx	mul_res+2
+	stx	mul_res+3
+mul_8_32_loop	
+	clc
+	ror	@
+	tax
+	bcc	mul_8_32_next
+	clc
+	lda	mul_res
+	adc	mul0
+	sta	mul_res
+	lda	mul_res+1
+	adc	mul0+1
+	sta	mul_res+1
+	lda	mul_res+2
+	adc	mul0+2
+	sta	mul_res+2
+	lda	mul_res+3
+	adc	mul0+3
+	sta	mul_res+3
+mul_8_32_next
+	clc
+	lda	mul0
+	rol	@
+	sta	mul0
+	lda	mul0+1
+	rol	@
+	sta	mul0+1
+	lda	mul0+2
+	rol	@
+	sta	mul0+2
+	lda	mul0+3
+	rol	@
+	sta	mul0+3
+	txa
+	bne	mul_8_32_loop
+mul_8_32_done	
+	rts
+; ------
+putstr
+	ldy	#0
+putstrloop
+	lda	(ptr),y
+	cmp	#$9b
+	beq	putstrdone
+	sta	(cursor),y+
+	jmp	putstrloop
+putstrdone
+
+	clc
+	tya
+	adc	cursor
+	sta	cursor
+	lda	cursor+1
+	adc	#0
+	sta	cursor+1
+
+	rts
+; ------
+putchar
+	ldy	#0
+	sta	(cursor),y
+	lda	#1
+	add:sta	cursor
+	lda	#0
+	adc:sta	cursor+1
+	rts
+; ------
+puthex
+	pha
+:4	ror	@
+	jsr	putdigit
+	pla
+	jsr	putdigit
+	rts
+
+putdigit
+	and	#$0f
+	tay
+	lda	digits,y
+	jsr	putchar
+	rts
+; ------
+prev_consol	dta	$07
+keys		dta	$00
+
+mul0		dta	0,0,0,0
+mul_res		dta	0,0,0,0
+
+fs_type		dta	0
+part0_1st_sec	dta	0,0,0,0
+fat_size	dta	0,0,0,0
+secs_per_clus	dta	0
+fat_start	dta	0,0,0,0
+fst_data_sec	dta	0,0,0,0
+
+direntry_index		dta	0
+direntry_select		dta	0
+total_direntries	dta	0
+direntry_indexes   :256	dta	0
+
+msg1	dta	d'Init',$9b
+msg2	dta	d'Read',$9b
+msg3	dta	d'MBR',$9b
+msg4	dta	d'BPB',$9b
+msg5	dta	d'Unknown filesystem type',$9b
+msg6	dta	d'Hit Start',$9b
+msg7	dta	d'Select'*,d':next file, ',d'Start'*,d':play movie',$9b
+digits	dta	d'0123456789ABCDEF'
+; ------
+	org	$a006+4
+	lda	#124
+	cmp:rne	^4b
+	lda	#123
+	cmp:rne	^4b
+	rts
+
+	end
