@@ -9,8 +9,12 @@ smp	equ	half+$ec0 ; 64+248
 	inc	^4e
 	lda	#124
 	cmp:rne	^4b
-	mvx	smp	^4a
-	stx	^21
+	lda	smp,y
+	lsr	@
+	sta	^4a
+	sta	^21
+	adc	#0
+	sta	^23
 	mva	#$22	^40 ;6
 	mwa	#dl	^42	;12
 	mvy	#1	^12	;6
@@ -23,18 +27,36 @@ smp	equ	half+$ec0 ; 64+248
 	mva	#12	^18	;6
 	mva	#14	^19	;6
 blank
-	mvx	smp,y+	^4a
-	stx	^21
+	lda	smp,y
+	lsr	@
+	sta	^4a
+	sta	^21
+	adc	#0
+	sta	^23
+	iny
 	cpy	#64
 	bcc	blank
 
 	ldy	#256-248
-	lda	#mode
 line
-	eor	#$40^$80
-	mvx	smp+312-256,y+	^4a
-	stx	^21
-	sta	^1b
+	ldx	#mode^$40^$80
+	lda	smp+312-256,y
+	lsr	@
+	sta	^4a
+	sta	^21
+	adc	#0
+	sta	^23
+	stx	^1b
+	iny
+	ldx	#mode
+	lda	smp+312-256,y
+	lsr	@
+	sta	^4a
+	sta	^21
+	adc	#0
+	sta	^23
+	stx	^1b
+	iny
 	bne	line
 	rts
 
