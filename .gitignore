@@ -34,6 +34,9 @@ cpld/iseconfig/
 cpld/atari_xlxe_sd_cartridge_cpld.xise
 cpld/atari_xlxe_sd_cartridge_cpld.gise
 cpld/_xmsgs/
+cpld/_impact.cmd
+cpld/_impact.log
+cpld/atari_xlxe_sd_cartridge.ipf
 uc/atari_xlxe_sd_cartridge Debug.launch
 uc/atari_xlxe_sd_cartridge Release.launch
 bootstrap/player.h
