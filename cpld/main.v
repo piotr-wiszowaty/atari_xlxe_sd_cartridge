@@ -121,7 +121,7 @@ always @(posedge clk) begin
     case ({state_cart_write, state_cart_read, state_uc_write, state_uc_read})
         // idle
         4'b0000:
-            if (fi2_rising & ~rw_r & cart_select)
+            if (fi2_rising & ~rw_r & (cart_d5_select | (cart_ram_select & cart_write_enable)))
                 state_cart_write <= 1;
             else if (fi2_rising & rw_r & cart_select)
                 state_cart_read <= 1;
