@@ -2,7 +2,8 @@ show_fat equ 0
 
 ptr	equ	$80
 dentry	equ	$82
-cursor	equ	$84
+dentry2	equ	$84
+cursor	equ	$86
 
 screen	equ	$7000
 sec_buf	equ	$9000
@@ -42,6 +43,7 @@ bpb_fat32_size	     equ $24
 
 ; FAT directory entry
 direntry_name	     equ $00
+direntry_attrs	     equ $0b
 direntry_fst_clus_hi equ $14
 direntry_fst_clus_lo equ $1a
 direntry_size	     equ 32
@@ -234,40 +236,46 @@ fat_size_done
 
 	ift	show_fat
 
-	; wait for Start key press & release
+	; wait for [Return]
 	mwa	#[screen+200]	cursor
 	mwa	#msg6	ptr
 	jsr	putstr
-w8_key_start
-	jsr	scan_keys
-	lda	#$01
-	bit	keys
-	beq	w8_key_start
+w8_return
+	jsr	getchar
+	cmp	#$9b
+	bne	w8_return
 
-	; clear screen (40*24 = 960 = $3c0)
+	; clear screen
 	jsr	clear_screen
 
 	eif
 
-	; scan & display directory entries (only files with 'XEX' extension)
+	; scan & display directory entries
 	mwa	#[screen+1]	ptr
 	mwa	#sec_buf	dentry
 de_loop	ldy	#0
 	lda	(dentry),y
-	beq	de_done
+	jeq	de_done			; last entry
 	cmp	#$e5
-	beq	de_next
-	ldy	#8
-	lda	(dentry),y+
-	cmp	#$58
-	bne	de_next
-	lda	(dentry),y+
-	cmp	#$45
-	bne	de_next
+	jeq	de_next			; entry deleted and/or available?
+	cmp	#$2e
+	jeq	de_next			; '.' or '..'?
+	ldy	#direntry_attrs
 	lda	(dentry),y
-	cmp	#$58
-	bne	de_next
-	ldx	#11
+	and	#$de			; hidden|system|vol_label|subdir|device
+	jne	de_next			; not a regular file?
+	lda	#$0f
+	cmp	prev_de_attrs
+	beq	de_long_filename
+de_short_filename
+	ldx	#9
+	ldy	#8
+de_scan_short_name_loop
+	dex
+	dey
+	lda	(dentry),y
+	cmp	#' '
+	beq	de_scan_short_name_loop
 	ldy	#0
 de_print_name_loop
 	lda	(dentry),y
@@ -275,6 +283,99 @@ de_print_name_loop
 	sta	(ptr),y+
 	dex
 	bne	de_print_name_loop
+	lda	#'.'
+	jsr	atascii2internal
+	sta	(ptr),y+
+de_print_ext
+	sty	offset
+	ldy	#8
+	lda	(dentry),y
+	jsr	atascii2internal
+	ldy	offset
+	sta	(ptr),y+
+	sty	offset
+	ldy	#9
+	lda	(dentry),y
+	jsr	atascii2internal
+	ldy	offset
+	sta	(ptr),y+
+	sty	offset
+	ldy	#10
+	lda	(dentry),y
+	jsr	atascii2internal
+	ldy	offset
+	sta	(ptr),y+
+	jmp	de_count_entry
+de_long_filename
+	mwa	dentry	dentry2
+	lda	#0
+	sta	offset
+de_long_filename_loop
+	lda	dentry2+0
+	sub	#direntry_size
+	sta	dentry2+0
+	lda	dentry+1
+	sbc	#0
+	sta	dentry2+1
+	ldy	#$01
+	jsr	put_lfn_char
+	beq	de_count_entry
+	ldy	#$03
+	jsr	put_lfn_char
+	beq	de_count_entry
+	ldy	#$05
+	jsr	put_lfn_char
+	beq	de_count_entry
+	ldy	#$07
+	jsr	put_lfn_char
+	beq	de_count_entry
+	ldy	#$09
+	jsr	put_lfn_char
+	beq	de_count_entry
+	ldy	#$0e
+	jsr	put_lfn_char
+	beq	de_count_entry
+	ldy	#$10
+	jsr	put_lfn_char
+	beq	de_count_entry
+	ldy	#$12
+	jsr	put_lfn_char
+	beq	de_count_entry
+	ldy	#$14
+	jsr	put_lfn_char
+	beq	de_count_entry
+	ldy	#$16
+	jsr	put_lfn_char
+	beq	de_count_entry
+	ldy	#$18
+	jsr	put_lfn_char
+	beq	de_count_entry
+	ldy	#$1c
+	jsr	put_lfn_char
+	beq	de_count_entry
+	ldy	#$1e
+	jsr	put_lfn_char
+	beq	de_count_entry
+	ldy	#0
+	lda	(dentry2),y
+	and	#$40
+	beq	de_long_filename_loop
+	jmp	de_count_entry
+put_lfn_char
+	lda	(dentry2),y+
+	sta	tmp
+	lda	(dentry2),y
+	ora	tmp
+	bne	do_put_lfn_char
+	rts
+do_put_lfn_char
+	lda	tmp
+	jsr	atascii2internal
+	ldy	offset
+	sta	(ptr),y+
+	sty	offset
+	rts
+de_count_entry
 	lda	#40
 	add:sta	ptr
 	lda	#0
@@ -284,7 +385,10 @@ de_print_name_loop
 	sta	direntry_indexes,x
 	inx
 	stx	total_direntries
-de_next	lda	#direntry_size
+de_next	ldy	#direntry_attrs
+	lda	(dentry),y
+	sta	prev_de_attrs
+	lda	#direntry_size
 	add:sta	dentry
 	lda	#0
 	adc:sta	dentry+1
@@ -300,28 +404,49 @@ de_done
 
 	mva	#$7f	screen
 select_loop
-	jsr	scan_keys
-	lda	#$01
-	bit	keys
-	bne	selected
-	lda	#$02
-	bit	keys
-	beq	select_loop
-	lda	#0
-	jsr	draw_selector
+	jsr	getchar
+	cmp	#$1c			; [Control] + [Up]
+	beq	select_previous
+	cmp	#$2d			; [-]
+	beq	select_previous
+	cmp	#$1d			; [Control] + [Down]
+	beq	select_next
+	cmp	#$3d			; [=]
+	beq	select_next
+	cmp	#$9b			; [Return]
+	beq	selected
+	jmp	select_loop
+select_previous
+	ldx	direntry_select
+	dex
+	stx	new_direntry_select
+	bpl	select_update
+	ldx	total_direntries
+	dex
+	stx	new_direntry_select
+	jmp	select_update
+select_next
 	ldx	direntry_select
 	inx
 	cpx	total_direntries
-	bne	skip_rewind
+	stx	new_direntry_select
+	bne	select_update
 	ldx	#0
-skip_rewind
-	stx	direntry_select
+	stx	new_direntry_select
+	;jmp	select_update
+select_update
+	lda	#0
+	jsr	draw_selector
+	lda	new_direntry_select
+	sta	direntry_select
 	lda	#$7f
 	jsr	draw_selector
 	jmp	select_loop
 selected
 	lda	#$ff
 	jsr	draw_selector
+
+	mva	#8	$d01f
 
 	; calculate selected file's first sector and setup D5 registers
 	mva	#direntry_size	mul0
@@ -381,6 +506,7 @@ selected
 
 	rts
 ; ------
+; 40*24 = $3c0 = $400 - $40
 clear_screen
 	mwa	#[screen-$40]	ptr
 	ldy	#$40
@@ -438,13 +564,11 @@ range_4	cmp	#$e0
 range_5	sub	#$10
 	rts
 ; ------
-scan_keys
-	lda	^1f
-	tax
-	eor	prev_consol
-	and	prev_consol
-	sta	keys
-	stx	prev_consol
+getchar
+	lda	$e425
+	pha
+	lda	$e424
+	pha
 	rts
 ; ------
 w8_cart_read
@@ -485,19 +609,10 @@ mul_8_32_loop
 	adc	mul0+3
 	sta	mul_res+3
 mul_8_32_next
-	clc
-	lda	mul0
-	rol	@
-	sta	mul0
-	lda	mul0+1
-	rol	@
-	sta	mul0+1
-	lda	mul0+2
-	rol	@
-	sta	mul0+2
-	lda	mul0+3
-	rol	@
-	sta	mul0+3
+	asl	mul0
+	rol	mul0+1
+	rol	mul0+2
+	rol	mul0+3
 	txa
 	bne	mul_8_32_loop
 mul_8_32_done	
@@ -513,23 +628,16 @@ putstrloop
 	jmp	putstrloop
 putstrdone
 
-	clc
 	tya
-	adc	cursor
-	sta	cursor
-	lda	cursor+1
-	adc	#0
-	sta	cursor+1
+	add:sta	cursor
+	scc:inc	cursor+1
 
 	rts
 ; ------
 putchar
 	ldy	#0
 	sta	(cursor),y
-	lda	#1
-	add:sta	cursor
-	lda	#0
-	adc:sta	cursor+1
+	inw	cursor
 	rts
 ; ------
 puthex
@@ -547,8 +655,9 @@ putdigit
 	jsr	putchar
 	rts
 ; ------
-prev_consol	dta	$07
-keys		dta	$00
+tmp		dta	0
+offset		dta	0
+prev_de_attrs	dta	0
 
 mul0		dta	0,0,0,0
 mul_res		dta	0,0,0,0
@@ -562,6 +671,7 @@ fst_data_sec	dta	0,0,0,0
 
 direntry_index		dta	0
 direntry_select		dta	0
+new_direntry_select	dta	0
 total_direntries	dta	0
 direntry_indexes   :256	dta	0
 
@@ -571,10 +681,12 @@ msg3	dta	d'MBR',$9b
 msg4	dta	d'BPB',$9b
 msg5	dta	d'Unknown filesystem type',$9b
 msg6	dta	d'Hit Start',$9b
-msg7	dta	d'Select'*,d':next file, ',d'Start'*,d':play movie',$9b
+msg7	dta	$dc,$dd,d':select file,',d'Return'*,d':play movie',$9b
 digits	dta	d'0123456789ABCDEF'
 ; ------
 	org	$a006+4
+	sei
+	sta	^4e
 	lda	#124
 	cmp:rne	^4b
 	lda	#123

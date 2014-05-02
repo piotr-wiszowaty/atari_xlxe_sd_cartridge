@@ -13,16 +13,13 @@ main
 	mva	#16	sec_cnt
 	mva	#$01	command
 
-	sei
-	sta	^4e
-
 	ldx	#reloc_len-1
 	mva:rpl	reloc_src,x	reloc_dest,x-
 
-	lda	#124
-	cmp:rne	^4b
-	lda	#123
-	cmp:rne	^4b
+w8_1st	lda	#$01
+	bit	command
+	bne	w8_1st
+
 	jmp	play
 
 reloc_src
