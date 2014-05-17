@@ -1,9 +1,10 @@
 show_fat equ 0
 
 ptr	equ	$80
-dentry	equ	$82
-dentry2	equ	$84
-cursor	equ	$86
+ptr2	equ	$82
+dentry	equ	$84
+dentry2	equ	$86
+cursor	equ	$88
 
 screen	equ	$7000
 sec_buf	equ	$9000
@@ -53,10 +54,12 @@ direntry_size	     equ 32
 :10	nop
 
 start
+	ift	show_fat
 	mwa	$230	ptr
 	ldy	#4
 	mva	<screen	(ptr),y+
 	mva	>screen	(ptr),y
+	eif
 
 	ift	show_fat
 	mwa	#screen	cursor
@@ -398,9 +401,50 @@ de_next	ldy	#direntry_attrs
 	jmp	de_loop
 de_done
 
+	; sort filenames:
+	; for top = total_direntries-2 .. 0
+	;   for bubble = 0 .. top
+	;      if direntries[bubble] > direntries[bubble+1] then swap
+	lda	total_direntries
+	sub	#2
+	sta	bubble_top
+bubble_outer_loop
+	lda	#0
+	sta	bubble
+	mwa	#screen		ptr		; [bubble]
+	mwa	#[screen+40]	ptr2		; [bubble+1]
+bubble_inner_loop
+	jsr	bubble_cmp
+	bcs	bubble_next
+	jsr	bubble_swap
+bubble_next
+	ldx	bubble
+	cpx	bubble_top
+	beq	bubble_inner_done
+	inx
+	stx	bubble
+	mwa	ptr2		ptr
+	lda	#40
+	add:sta	ptr2
+	lda	#0
+	adc:sta	ptr2+1
+	jmp	bubble_inner_loop
+bubble_inner_done
+	ldx	bubble_top
+	beq	bubble_outer_done
+	dex
+	stx	bubble_top
+	jmp	bubble_outer_loop
+bubble_outer_done
+
 	mwa	#[screen+40*23]	cursor
 	mwa	#msg7	ptr
 	jsr	putstr
+
+	mwa	$230	ptr
+	ldy	#4
+	mva	<screen	(ptr),y+
+	mva	>screen	(ptr),y
 
 	mva	#$7f	screen
 select_loop
@@ -503,6 +547,43 @@ selected
 	lda	sec_num+3
 	sbc	#0
 	sta	sec_num+3
+
+	rts
+; ------
+bubble_cmp
+	ldy	#1
+bubble_cmp_loop
+	lda	(ptr2),y
+	cmp	(ptr),y
+	bne	bubble_cmp_done
+	iny
+	cpy	#40
+	bne	bubble_cmp_loop
+bubble_cmp_done
+	rts
+; ------
+bubble_swap
+	; swap filenames
+	ldy	#1
+bubble_swap_loop
+	lda	(ptr),y
+	sta	tmp
+	lda	(ptr2),y
+	sta	(ptr),y
+	lda	tmp
+	sta	(ptr2),y
+	iny
+	cpy	#40
+	bne	bubble_swap_loop
+
+	; swap direntry indexes
+	ldx	bubble
+	lda	direntry_indexes,x
+	sta	tmp
+	lda	direntry_indexes+1,x
+	sta	direntry_indexes,x
+	lda	tmp
+	sta	direntry_indexes+1,x
 
 	rts
 ; ------
@@ -674,6 +755,9 @@ direntry_select		dta	0
 new_direntry_select	dta	0
 total_direntries	dta	0
 direntry_indexes   :256	dta	0
+
+bubble_top	dta	0
+bubble		dta	0
 
 msg1	dta	d'Init',$9b
 msg2	dta	d'Read',$9b
