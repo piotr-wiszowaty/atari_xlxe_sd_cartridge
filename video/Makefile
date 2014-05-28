@@ -1,8 +1,5 @@
 all: film.xex
 
-player.bin: player.asx
-	xasm -q -o $@ $<
-
 film.xex: yuv2hip.exe stream.yuv audiodump.pcm hip8000.obx hipa000.obx
 	./yuv2hip.exe
 
@@ -16,7 +13,7 @@ hipa000.obx: hip.asx
 	xasm -q -d main=\$$a006 -d mode=\$$80 -o $@ $<
 
 clean:
-	rm player.bin film.xex yuv2hip.exe hip8000.obx hipa000.obx
+	$(RM) film.xex yuv2hip.exe hip8000.obx hipa000.obx
 
 .PHONY: all clean
 
