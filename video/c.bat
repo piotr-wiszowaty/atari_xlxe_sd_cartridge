@@ -1,1 +1,0 @@
-\bin\mplayer-svn-35952\mplayer -benchmark -ao pcm:nowaveheader -af channels=1,resample=15600,format=u8 -vf scale=160:90 -vo yuv4mpeg dvd://1
