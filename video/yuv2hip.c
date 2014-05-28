@@ -75,27 +75,27 @@ static void hip(const unsigned char *raw, int w, int h)
 	fclose(fp);
 }
 
-static int smp_min = 0x7fff;
-static int smp_max = -0x8000;
+static int smp_min = 0xff;
+static int smp_max = 0;
 
 static void smp(unsigned char *p, FILE *audio)
 {
-	char buf[312 * 2];
+	unsigned char buf[312];
 	int i;
-	memset(buf, 0, sizeof(buf));
+	memset(buf, 0x80, sizeof(buf));
 	fread(buf, 1, sizeof(buf), audio);
 	for (i = 0; i < 312; i++) {
-		int s = (unsigned char) buf[i * 2] + (buf[i * 2 + 1] << 8);
+		int s = buf[i];
 		if (smp_min > s)
 			smp_min = s;
 		if (smp_max < s)
 			smp_max = s;
-		s = (s >> 6) + 0x78 + (rand() & 7) >> 3;
+		s = (s - 0x80) * 4 + 0x70 + (rand() & 0xf);
 		if (s < 0)
 			s = 0;
-		else if (s > 0x1e)
-			s = 0x1e;
-		*p++ = 0xe0 | s;
+		else if (s > 255)
+			s = 255;
+		*p++ = (s >> 4) | 0xf0;
 	}
 }
 
