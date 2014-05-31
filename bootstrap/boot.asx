@@ -553,8 +553,12 @@ selected
 bubble_cmp
 	ldy	#1
 bubble_cmp_loop
+	lda	(ptr),y
+	jsr	internal2lowercase
+	sta	tmp
 	lda	(ptr2),y
-	cmp	(ptr),y
+	jsr	internal2lowercase
+	cmp	tmp
 	bne	bubble_cmp_done
 	iny
 	cpy	#40
@@ -650,6 +654,15 @@ getchar
 	pha
 	lda	$e424
 	pha
+	rts
+; ------
+internal2lowercase
+	cmp	#$21		; 'A'
+	bcc	internal2lowercase_done
+	cmp	#$3B		; 'Z'+1
+	bcs	internal2lowercase_done
+	ora	#$40
+internal2lowercase_done
 	rts
 ; ------
 w8_cart_read
