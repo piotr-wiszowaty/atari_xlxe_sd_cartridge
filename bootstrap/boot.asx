@@ -322,7 +322,7 @@ de_long_filename_loop
 	sta	dentry2+1
 	ldy	#$01
 	jsr	put_lfn_char
-	beq	de_count_entry
+	jeq	de_count_entry
 	ldy	#$03
 	jsr	put_lfn_char
 	beq	de_count_entry
@@ -369,14 +369,15 @@ put_lfn_char
 	sta	tmp
 	lda	(dentry2),y
 	ora	tmp
-	bne	do_put_lfn_char
-	rts
-do_put_lfn_char
+	beq	put_lfn_char_done
 	lda	tmp
 	jsr	atascii2internal
 	ldy	offset
+	cpy	#39
+	beq	put_lfn_char_done
 	sta	(ptr),y+
 	sty	offset
+put_lfn_char_done
 	rts
 de_count_entry
 	lda	#40
