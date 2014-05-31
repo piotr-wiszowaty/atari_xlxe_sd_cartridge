@@ -317,7 +317,7 @@ de_long_filename_loop
 	lda	dentry2+0
 	sub	#direntry_size
 	sta	dentry2+0
-	lda	dentry+1
+	lda	dentry2+1
 	sbc	#0
 	sta	dentry2+1
 	ldy	#$01
