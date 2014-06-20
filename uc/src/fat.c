@@ -108,6 +108,7 @@ int fat_equ_filename(char *filename, char *dir_entry_name)
 uint32_t fat_find_first_sector(char *filename)
 {
 	int i;
+	int j;
 	uint8_t buf[512];
 	Master_Boot_Record *mbr;
 	uint8_t fs_type;
@@ -120,6 +121,8 @@ uint32_t fat_find_first_sector(char *filename)
 	uint32_t first_data_sector;
 	Dir_Entry *dir_entries;
 	uint32_t cluster;
+	uint32_t root_cluster;
+	uint32_t *fat;
 
 	if (sdmmc_read_block(0, buf) < 0) {
 		return 0;
@@ -141,23 +144,41 @@ uint32_t fat_find_first_sector(char *filename)
 	}
 	sectors_per_cluster = bpb->sectors_per_cluster;
 	reserved_sectors_count = bpb->reserved_sectors_count;
+	root_cluster = bpb->root_cluster;
 	fat_start = part0_first_sector + reserved_sectors_count;
 	first_data_sector = fat_start + bpb->num_fats * fat_size;
 
-	if (sdmmc_read_block(first_data_sector, buf) < 0) {
+	if (sdmmc_read_block(first_data_sector + sectors_per_cluster*(root_cluster - 2), buf) < 0) {
 		return 0;
 	}
 	dir_entries = (Dir_Entry *) buf;
+	fat = (uint32_t *) buf;
 
 	i = 0;
+	j = 0;
 	while (dir_entries[i].name[0]) {
-		if (dir_entries[i].name[0] != 0xe5) {
+		if (dir_entries[i].name[0] != 0xe5 && (dir_entries[i].attr & 0xde) == 0) {
 			if (fat_equ_filename(filename, (char *) &(dir_entries[i].name))) {
 				cluster = ((uint32_t) dir_entries[i].fst_clus_hi << 16) | (uint32_t) dir_entries[i].fst_clus_lo;
 				return first_data_sector + (cluster - 2) * sectors_per_cluster;
 			}
 		}
-		i++;
+		if (++i == 512/sizeof(Dir_Entry)) {
+			i = 0;
+			if (++j == sectors_per_cluster) {
+				if (sdmmc_read_block(fat_start + sizeof(uint32_t)*root_cluster/512, buf) < 0) {
+					return 0;
+				}
+				root_cluster = fat[root_cluster & (512/sizeof(uint32_t) - 1)];
+				if (root_cluster == 0x0fffffff) {
+					break;
+				}
+				j = 0;
+			}
+			if (sdmmc_read_block(first_data_sector + sectors_per_cluster*(root_cluster - 2) + j, buf) < 0) {
+				return 0;
+			}
+		}
 	}
 
 	return 0;
