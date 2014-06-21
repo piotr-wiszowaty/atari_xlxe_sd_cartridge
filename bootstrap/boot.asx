@@ -864,6 +864,11 @@ load_root_dir_sector
 	mva	#$01	command
 	jsr	w8_cart_read
 
+	mva	#0	 sdmctl
+	mwa	#dlist_2 dladr
+	mva	#$22	 sdmctl
+	mva	#8	 $d01f
+
 	rts
 ; ------
 update_dlist
@@ -921,5 +926,11 @@ done_set_dlist
 	lda	#123
 	cmp:rne	^4b
 	rts
+
+dlist_2	dta	$70,$70,$70
+    :24	dta	$42,a(empty)
+	dta	$41,a(dlist_2)
+empty
+    :40	dta	0
 
 	end
