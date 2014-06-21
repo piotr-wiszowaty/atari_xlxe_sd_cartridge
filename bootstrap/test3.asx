@@ -1,0 +1,17 @@
+	opt	h-f+
+	org	$8000
+:10	nop
+start	
+	mva	#0	$22f
+	mwa	#dlist	$230
+	mva	#$22	$22f
+	jmp	*
+
+dlist	dta	$70,$70,$70
+	dta	$42,a(line1)
+    :23	dta	$42,a(line2)
+	dta	$41,a(dlist)
+line1	dta	d'<<',$ff,$ff,$ff,$ff,d'>>'
+    :32	dta	0
+line2
+    :40	dta	0

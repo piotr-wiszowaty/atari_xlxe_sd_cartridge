@@ -1,4 +1,4 @@
-OBXS = player.obx boot.obx test.obx
+OBXS = player.obx boot.obx test.obx test3.obx
 HDRS = player.h
 
 all: $(HDRS) $(OBXS)
