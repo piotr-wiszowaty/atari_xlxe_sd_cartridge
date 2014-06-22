@@ -2,6 +2,7 @@
 	org	$8000
 :10	nop
 start	
+	cli
 	mva	#0	$22f
 	mwa	#dlist	$230
 	mva	#$22	$22f
