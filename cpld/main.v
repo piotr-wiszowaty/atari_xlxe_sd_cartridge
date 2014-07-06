@@ -40,7 +40,7 @@ module main(
     input strobe_addr,
     output aux0,
     output aux1,
-    /*input aux2,*/
+    input cart_write_enable,
     /*input aux3,*/
     /*input aux4,*/
     /*input aux5,*/
@@ -69,8 +69,6 @@ reg [7:0] cart_out_data_latch;
 
 reg [14:0] uc_addr = 0;
 reg [7:0] uc_out_data_latch = 0;
-
-reg cart_write_enable = 0;
 
 //assign cart_fi2_copy = cart_fi2;
 
@@ -151,9 +149,6 @@ always @(posedge clk) begin
                 state_uc_read <= 0;
     endcase
 
-    if (state_cart_write & phase == 2'b00)
-        cart_write_enable <= 1;
-
     if (state_cart_read & phase == 2'b10)
         cart_out_data_latch <= ram_data;
 
@@ -167,11 +162,11 @@ always @(posedge clk) begin
 end
 
 assign ram_oe = ~(state_cart_read | state_uc_read);
-assign ram_we = ~(((state_cart_write & cart_write_enable) | state_uc_write) & |phase);
+assign ram_we = ~((state_cart_write | state_uc_write) & phase[1]);
 
-assign dbg0 = state_cart_write;
-assign dbg1 = state_cart_read;
-assign aux0 = state_uc_write;
-assign aux1 = state_uc_read;
+assign dbg0 = state_uc_read;
+assign dbg1 = ram_oe;
+assign aux0 = phase[0];
+assign aux1 = phase[1];
 
 endmodule

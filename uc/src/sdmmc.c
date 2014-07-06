@@ -200,7 +200,6 @@ int sdmmc_write_multiple_blocks(uint32_t address, uint32_t n_blocks, uint8_t (*n
 {
 	int result;
 	int i;
-	int j;
 
 	if ((result = sdmmc_cmd(25, block_addressing ? address : address << 9)) < 0) {
 		cs_high();

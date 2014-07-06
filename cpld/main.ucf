@@ -75,7 +75,7 @@ net "clk" loc = p23;
 
 net "aux0" loc = p41;
 net "aux1" loc = p40;
-#net "aux2" loc = p6;
+net "cart_write_enable" loc = p6;
 #net "aux3" loc = p32;
 #net "aux4" loc = p35;
 #net "aux5" loc = p19;

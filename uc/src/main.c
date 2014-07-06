@@ -1,6 +1,6 @@
 /**
  *  Atari XL/XE SD cartridge
- *  Copyright (C) 2013  Piotr Wiszowaty
+ *  Copyright (C) 2013,2014  Piotr Wiszowaty
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -66,6 +66,7 @@
 // GPIO3
 #define ACK				(1 << 2)
 #define LED1			(1 << 3)
+#define CART_WRITE_ENABLE (1 << 4)
 
 #define SPI0_SLOW		100
 #define SPI0_FAST		2
@@ -77,9 +78,6 @@
 #define YELLOW_LED_OFF	LPC_GPIO1->MASKED_ACCESS[LED2] = LED2
 #define RED_LED_ON		LPC_GPIO3->MASKED_ACCESS[LED1] = 0
 #define RED_LED_OFF		LPC_GPIO3->MASKED_ACCESS[LED1] = LED1
-
-#define PANIC			RED_LED_ON; \
-						while (1)
 
 #define DATA_IN			LPC_GPIO2->DIR &= ~DATA
 #define DATA_OUT		LPC_GPIO2->DIR |= DATA
@@ -223,6 +221,34 @@ void clear_d5()
 	}
 }
 
+void wait_100ms()
+{
+	LPC_TMR32B0->MR0 = 100 * 1000;
+	LPC_TMR32B0->MCR = 0x06;				// stop & reset on MR0 match
+	LPC_TMR32B0->TCR = 1;					// start
+	while (LPC_TMR32B0->TCR & 1);
+}
+
+void init_cart_ram()
+{
+	int i;
+	int c;
+
+	// write bootstrap code to RAM
+	ram_set_address(OFFSET_BOOTSTRAP);
+	for (i = 0; i < 256; i++) {
+		ram_write(bootstrap[i]);
+	}
+	// verify written bootstrap
+	ram_set_address(OFFSET_BOOTSTRAP);
+	DATA_IN;
+	for (i = 0; i < 256; i++) {
+		if ((c = ram_read()) != bootstrap[i]) {
+			blinking_panic();
+		}
+	}
+}
+
 int main()
 {
 	int i;
@@ -233,14 +259,16 @@ int main()
 	uint32_t n_sectors;
 	uint32_t sector_offset;
 	int uart_div;
-	int t_1st;
-	int t_2nd;
-	int t_total;
+	int t_1st = 0;
+	int t_2nd = 0;
+	int t_total = 0;
 	int max_t_1st = 0;
 	int max_t_2nd = 0;
 	int max_t_total = 0;
 	uint32_t active_read_sector = 0;
 	int result;
+	int initialized = 0;
+	int error = 0;
 
 	LPC_SYSCON->SYSAHBCLKCTRL |= EN_IOCON | EN_SSP | EN_UART | EN_TIMER32_0;
 
@@ -252,8 +280,8 @@ int main()
 
 	LPC_GPIO2->DIR |= AUX4 | AUX5;
 
-	LPC_GPIO3->DIR |= LED1;
-	LPC_GPIO3->MASKED_ACCESS[LED1] = LED1;
+	LPC_GPIO3->DIR |= LED1 | CART_WRITE_ENABLE;
+	LPC_GPIO3->MASKED_ACCESS[LED1 | CART_WRITE_ENABLE] = LED1;
 
 	LPC_IOCON->R_PIO0_11 = 0x91;			// digital mode, pull-up
 
@@ -280,11 +308,7 @@ int main()
 	LPC_TMR32B0->PR = SystemCoreClock / 1000000 - 1;	// 1 us resolution
 	LPC_TMR32B0->TCR = 2;								// reset
 
-	// wait 100 ms
-	LPC_TMR32B0->MR0 = 100 * 1000;
-	LPC_TMR32B0->MCR = 0x06;				// stop & reset on MR0 match
-	LPC_TMR32B0->TCR = 1;					// start
-	while (LPC_TMR32B0->TCR & 1);
+	wait_100ms();
 
 	// output system clock on CLKO pin
 	LPC_SYSCON->CLKOUTDIV = 1;
@@ -294,47 +318,68 @@ int main()
 	LPC_IOCON->PIO0_1 = 0xc1;				// CLKO
 
 	clear_d5();
-
-	// write bootstrap code to RAM
-	ram_set_address(OFFSET_BOOTSTRAP);
-	for (i = 0; i < 256; i++) {
-		ram_write(bootstrap[i]);
-	}
-	// verify written bootstrap
-	ram_set_address(OFFSET_BOOTSTRAP);
-	DATA_IN;
-	for (i = 0; i < 256; i++) {
-		if ((c = ram_read()) != bootstrap[i]) {
-			blinking_panic();
-		}
-	}
-
-	// initialize SD card
 	if (!CARD_PRESENT) {
-		PANIC;
+		init_cart_ram();
 	}
-	if ((i = sdmmc_init()) < 0) {
-		PANIC;
-	} else {
-		LPC_SYSCON->SSP0CLKDIV = SPI0_FAST;
-	}
-
-	// indicate successful SD card initialization
-	YELLOW_LED_ON;
-
-	// find executable file on SD card
-	if ((sector = fat_find_first_sector("boot.xex")) == 0) {
-		PANIC;
-	}
-
-	// initialize sector-number-to-load in RAM
-	ram_set_address(OFFSET_D5E8 + 3);
-	ram_write((sector >>  0) & 0xff);
-	ram_write((sector >>  8) & 0xff);
-	ram_write((sector >> 16) & 0xff);
-	ram_write((sector >> 24) & 0xff);
 
 	while (1) {
+		if (error) {
+			if (CARD_PRESENT) {
+				continue;
+			} else {
+				error = 0;
+				initialized = 0;
+				RED_LED_OFF;
+				YELLOW_LED_OFF;
+			}
+		}
+
+		if (!initialized && CARD_PRESENT) {
+			init_cart_ram();
+
+			// initialize SD card
+			wait_100ms();
+			if ((i = sdmmc_init()) < 0) {
+				error = 1;
+				RED_LED_ON;
+				continue;
+			} else {
+				LPC_SYSCON->SSP0CLKDIV = SPI0_FAST;
+			}
+
+			// indicate successful SD card initialization
+			YELLOW_LED_ON;
+
+			// find executable file on SD card
+			if ((sector = fat_find_first_sector("boot.xex")) == 0) {
+				error = 1;
+				RED_LED_ON;
+				continue;
+			}
+
+			// initialize sector-number-to-load in RAM
+			ram_set_address(OFFSET_D5E8 + 3);
+			ram_write((sector >>  0) & 0xff);
+			ram_write((sector >>  8) & 0xff);
+			ram_write((sector >> 16) & 0xff);
+			ram_write((sector >> 24) & 0xff);
+
+			initialized = 1;
+		}
+
+		if (!initialized) {
+			continue;
+		}
+
+		if (!CARD_PRESENT) {
+			LPC_GPIO3->MASKED_ACCESS[CART_WRITE_ENABLE] = 0;
+			clear_d5();
+			YELLOW_LED_OFF;
+			RED_LED_OFF;
+			initialized = 0;
+			continue;
+		}
+
 		if ((c = rx()) > -1) {
 			switch (c) {
 				case 'a':
@@ -377,6 +422,9 @@ int main()
 		ram_set_address(OFFSET_D5E8);
 		DATA_IN;
 		command = ram_read();
+		if (command & (CMD_MASK_READ | CMD_MASK_WRITE)) {
+			LPC_GPIO3->MASKED_ACCESS[CART_WRITE_ENABLE] = -1;
+		}
 		if (command & CMD_MASK_READ) {		 // read sector(s)?
 			FETCH_CMD_PARAMS;
 			if (n_sectors) {
