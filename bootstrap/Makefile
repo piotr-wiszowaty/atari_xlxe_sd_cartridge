@@ -1,4 +1,4 @@
-OBXS = player.obx boot.obx test.obx test3.obx
+OBXS = player.obx boot.obx test.obx test3.obx boot2.obx
 HDRS = player.h
 
 all: $(HDRS) $(OBXS)
@@ -8,6 +8,9 @@ all: $(HDRS) $(OBXS)
 
 %.h: %.obx
 	./bin2h $^ | sed -e 's/char array/char bootstrap/' > $@
+
+boot2.asx: boot2.forth
+	foco65 $^ > $@
 
 clean:
 	rm -f $(OBXS) $(HDRS)
