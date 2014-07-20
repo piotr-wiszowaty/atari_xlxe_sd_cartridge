@@ -59,8 +59,6 @@ $1A constant direntry-1st-clus-lo
 
 variable cursor
 create msg1 ,' unknown FAT type'
-create msg2 ' foo'
-create msg3 ' bar'
 create fs-type 0 c,
 create sectors-per-cluster 0 c,
 2variable part0-1st-sector
@@ -298,6 +296,9 @@ ud_rshift_end
  jmp next
 [end-code] ;
 
+: shift-sec-buf
+  [ sec-buf1 512 + ] sec-buf1 512 cmove ;
+
 : find-next-root-dir-cluster
   [ fat-buf $8000 - 512 / ] sec-offs c!
   \ sector_number = fat-start + root-dir-cluster/128
@@ -315,7 +316,6 @@ ud_rshift_end
   first-data-sector 2@ d+
   direntry-sector-counter @ 0 d+
   swap sec-num 2!
-  \ 188 set-cursor  sec-num 2@ swap print-hex-dword
   [ sec-buf1 $8000 - 512 / 1 + ] sec-offs c!
   cart-read ;
 
@@ -742,6 +742,7 @@ internal2lowercase_done
   \ scan root directory entries
   begin
     de-scan-finished? @ not while
+    shift-sec-buf
     load-root-dir-sector
     direntry-sector-counter ++
     [ sec-buf1 512 + ] de-ptr !
