@@ -1,4 +1,4 @@
-[section] init
+[text-section] init
 
 [code]
  opt h-f+
@@ -6,7 +6,7 @@
  :10 dta 0
 [end-code]
 
-[section] code
+[text-section] text
 
 23 constant visible-files
 
@@ -66,11 +66,11 @@ create sectors-per-cluster 0 c,
 2variable fat-start
 2variable first-data-sector
 2variable root-dir-cluster
-variable direntry-sector-counter
+create direntry-sector-counter 0 ,
 variable de-ptr
-variable total-files
-variable de-scan-finished?
-variable prev-de-attrs
+create total-files 0 ,
+create de-scan-finished? 0 ,
+create prev-de-attrs 0 ,
 variable done-sector?
 variable filename
 variable char-count
@@ -82,10 +82,10 @@ variable heap-size
 create line-addresses 256 cells allot
 create filename-indexes 256 allot
 create first-sectors 256 4 * allot
-variable selected-file-index
+create selected-file-index 0 ,
 variable new-selected-file-index
-variable select-window-top-index
-variable dlist-select
+create select-window-top-index 0 ,
+create dlist-select 0 ,
 create legend $DC c, $DD c, ' :select file,' ' Return'* ' :load & run        '
 create dlist0
   $70 c, $70 c, $70 c,
@@ -297,7 +297,17 @@ ud_rshift_end
 [end-code] ;
 
 : shift-sec-buf
-  [ sec-buf1 512 + ] sec-buf1 512 cmove ;
+[code]
+ ldy #0
+shift_loop
+ lda sec_buf1+512,y
+ sta sec_buf1,y
+ lda sec_buf1+768,y
+ sta sec_buf1+256,y
+ iny
+ bne shift_loop
+ jmp next
+[end-code] ;
 
 : find-next-root-dir-cluster
   [ fat-buf $8000 - 512 / ] sec-offs c!
