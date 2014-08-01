@@ -112,8 +112,8 @@ create dlist0
   $42 c, screen 800 + ,
   $42 c, screen 840 + ,
   $42 c, screen 880 + ,
-  $42 c, screen 920 + ,
-  $41 c, 0 ,
+  $42 c, legend ,
+  $41 c, dlist0 ,
 create dlist1
   $70 c, $70 c, $70 c,
   $42 c, screen   0 + ,
@@ -139,8 +139,8 @@ create dlist1
   $42 c, screen 800 + ,
   $42 c, screen 840 + ,
   $42 c, screen 880 + ,
-  $42 c, screen 920 + ,
-  $41 c, 0 ,
+  $42 c, legend ,
+  $41 c, dlist1 ,
 
 : mul-8-32      ( x1 x2 c -- y1 y2 )
 [code]
@@ -247,7 +247,7 @@ do_gc
   print-hex-word print-hex-word ;
 
 : show-sp
-  [ 40 23 * 2 - ] set-cursor
+  [ 40 23 * 2 - ] literal set-cursor
   sp print-hex-byte ;
 
 : show-sp-l
@@ -310,7 +310,7 @@ shift_loop
 [end-code] ;
 
 : find-next-root-dir-cluster
-  [ fat-buf $8000 - 512 / ] sec-offs c!
+  [ fat-buf $8000 - 512 / ] literal sec-offs c!
   \ sector_number = fat-start + root-dir-cluster/128
   fat-start 2@ root-dir-cluster 2@ 7 ud-rshift d+ swap sec-num 2!
   cart-read
@@ -326,7 +326,7 @@ shift_loop
   first-data-sector 2@ d+
   direntry-sector-counter @ 0 d+
   swap sec-num 2!
-  [ sec-buf1 $8000 - 512 / 1 + ] sec-offs c!
+  [ sec-buf1 $8000 - 512 / 1 + ] literal sec-offs c!
   cart-read ;
 
 : last-root-dir-cluster?
@@ -692,15 +692,11 @@ internal2lowercase_done
 
   screen clear-screen
 
-  legend [ 24 3 * 1 + ] dlist0 + !
-  dlist0 [ 25 3 * 1 + ] dlist0 + !
-  legend [ 24 3 * 1 + ] dlist1 + !
-  dlist1 [ 25 3 * 1 + ] dlist1 + !
   switch-dlist
 
   \ read MBR
   0 0 sec-num 2!
-  [ sec-buf1 $8000 - 512 / ] sec-offs c!
+  [ sec-buf1 $8000 - 512 / ] literal sec-offs c!
   1 sec-cnt c!
   cart-read
 
@@ -742,8 +738,8 @@ internal2lowercase_done
 
   screen 256 0 do
     dup line-addresses i cells + !
-    i [ 102 1 - ] = i [ 204 1 - ] = or if
-      [ 40 16 + ]   \ 102 filenames in $5000..$5FFF and in $6000.$6FFF
+    i [ 102 1 - ] literal = i [ 204 1 - ] literal = or if
+      [ 40 16 + ] literal   \ 102 filenames in $5000..$5FFF and in $6000..$6FFF
     else
       40
     then +
@@ -755,10 +751,10 @@ internal2lowercase_done
     shift-sec-buf
     load-root-dir-sector
     direntry-sector-counter ++
-    [ sec-buf1 512 + ] de-ptr !
+    [ sec-buf1 512 + ] literal de-ptr !
     0 done-sector? !
     begin
-      de-ptr @ [ sec-buf1 1024 + ] u< if
+      de-ptr @ [ sec-buf1 1024 + ] literal u< if
         de-ptr @ c@ 0= if -1 de-scan-finished? ! then
       else
         -1 done-sector? !
