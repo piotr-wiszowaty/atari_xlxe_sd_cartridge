@@ -481,6 +481,7 @@ cls_loop
  sta (w),y
  iny
  bne cls_loop
+ inc w+1
  dex
  bne cls_loop
  ldx z
