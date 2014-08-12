@@ -81,7 +81,7 @@ variable largest
 variable heap-size
 create line-addresses 256 cells allot
 create filename-indexes 256 allot
-create first-sectors 256 4 * allot
+create first-clusters 256 4 * allot
 create selected-file-index 0 ,
 variable new-selected-file-index
 create select-window-top-index 0 ,
@@ -777,9 +777,7 @@ internal2lowercase_done
         \ file's 1st sector: 1st_data_sector + (1st_cluster-2)*sectors_per_cluster
         de-ptr @ direntry-1st-clus-lo + @
         de-ptr @ direntry-1st-clus-hi + @
-        2 0 d- sectors-per-cluster c@ mul-8-32
-        first-data-sector 2@ d+
-        first-sectors total-files @ 2 lshift + 2!
+        first-clusters total-files @ 2 lshift + 2!
 
         total-files ++
       then
@@ -831,7 +829,9 @@ internal2lowercase_done
 
   \ run selected file
   filename-indexes selected-file-index @ + c@ 2 lshift
-  first-sectors + 2@
+  first-clusters + 2@
+  2 0 d- sectors-per-cluster c@ mul-8-32
+  first-data-sector 2@ d+
   $10 0 d-
   swap sec-num 2!
 
