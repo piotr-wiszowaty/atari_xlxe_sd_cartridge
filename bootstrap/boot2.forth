@@ -784,7 +784,7 @@ internal2lowercase_done
       de-ptr @ direntry-attrs + c@ prev-de-attrs c!
       de-ptr @ direntry-size + de-ptr !
     repeat
-    direntry-sector-counter @ 8 = if
+    direntry-sector-counter @ sectors-per-cluster @ = if
       find-next-root-dir-cluster
       last-root-dir-cluster? if -1 de-scan-finished? ! then
       0 direntry-sector-counter !
