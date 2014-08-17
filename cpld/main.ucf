@@ -30,6 +30,8 @@ net "cart_s5" loc = p53;
 net "cart_cctl" loc = p50;
 net "ram_oe" loc = p92;
 net "ram_we" loc = p81;
+net "cart_rd4" loc = p87;
+net "cart_rd5" loc = p56;
 
 net "ram_addr<0>"  loc = p12;
 net "ram_addr<1>"  loc = p11;
