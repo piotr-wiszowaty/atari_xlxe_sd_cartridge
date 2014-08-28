@@ -12,7 +12,11 @@
 
 $022F constant sdmctl
 $0230 constant dladr
+$02E0 constant runad
+$02E2 constant initad
+$0800 constant copy-buffer
 $5000 constant screen
+$A600 constant file-sizes
 $AA00 constant sec-buf1
 $AE00 constant fat-buf
 $D01F constant consol
@@ -55,9 +59,11 @@ $00 constant direntry-name
 $0B constant direntry-attrs
 $14 constant direntry-1st-clus-hi
 $1A constant direntry-1st-clus-lo
+$1C constant direntry-file-size
 32  constant direntry-size
 
 variable cursor
+create negative 0 c,
 create msg1 ,' unknown FAT type'
 create fs-type 0 c,
 create sectors-per-cluster 0 c,
@@ -79,14 +85,26 @@ variable right
 variable current
 variable largest
 variable heap-size
+variable play-movie?
+variable execute-binary?
 create line-addresses 256 cells allot
 create filename-indexes 256 allot
 create first-clusters 256 4 * allot
+variable sector-in-cluster
+variable byte-in-sector
+2variable byte-in-file
+2variable current-file-cluster
+2variable selected-file-size
+variable byte-ptr
+variable byte-index
+variable block-end
+variable first-block
+variable chunk-length
 create selected-file-index 0 ,
 variable new-selected-file-index
 create select-window-top-index 0 ,
 create dlist-select 0 ,
-create legend $DC c, $DD c, ' :select file,' ' Return'* ' :load & run        '
+create legend $DC c, $DD c, ' :select file,' ' P'* ' lay,' ' E'* ' xecute             '
 create dlist0
   $70 c, $70 c, $70 c,
   $42 c, screen   0 + ,
@@ -141,6 +159,12 @@ create dlist1
   $42 c, screen 880 + ,
   $42 c, legend ,
   $41 c, dlist1 ,
+
+: brk
+[code]
+ brk
+ jmp next
+[end-code] ;
 
 : mul-8-32      ( x1 x2 c -- y1 y2 )
 [code]
@@ -217,9 +241,10 @@ do_gc
   count cursor @ + cursor !
   drop ;
 
-: put-digit     ( u c -- )
+: put-digit     ( c-addr c -- )
   $0F and
   dup 9 > if 23 else 16 then +
+  negative c@ or
   swap c! ;
 
 : cursor-next   ( -- u )
@@ -309,28 +334,38 @@ shift_loop
  jmp next
 [end-code] ;
 
-: find-next-root-dir-cluster
+: cluster-to-sector     ( ud -- ud )
+  2 0 d- sectors-per-cluster c@ mul-8-32
+  first-data-sector 2@ d+ ;
+
+: find-next-cluster     ( ud -- ud )
   [ fat-buf $8000 - 512 / ] literal sec-offs c!
-  \ sector_number = fat-start + root-dir-cluster/128
-  fat-start 2@ root-dir-cluster 2@ 7 ud-rshift d+ swap sec-num 2!
+  1 sec-cnt c!
+  \ sector_number = fat-start + cluster/128
+  2dup 7 ud-rshift fat-start 2@ d+ swap sec-num 2!
   cart-read
-  \ next_cluster_addr = fat-buf + (root-dir-cluster & 127) * 4
-  fat-buf root-dir-cluster 2 + @ $7F and 2 lshift +
-  2@ swap root-dir-cluster 2! ;
+  \ next_cluster_addr = fat-buf + (cluster & 127) * 4
+  drop $7F and 2 lshift fat-buf +
+  2@ swap ;
+
+: find-next-file-cluster
+  current-file-cluster 2@ find-next-cluster current-file-cluster 2! ;
+
+: find-next-root-dir-cluster
+  root-dir-cluster 2@ find-next-cluster root-dir-cluster 2! ;
 
 \ sector_number = first-data-sector +
 \    sectors_per_cluster * (root-dir-cluster - 2) +
 \    direntry-sector-counter
 : load-root-dir-sector
-  root-dir-cluster 2@ 2 0 d- sectors-per-cluster c@ mul-8-32
-  first-data-sector 2@ d+
+  root-dir-cluster 2@ cluster-to-sector
   direntry-sector-counter @ 0 d+
   swap sec-num 2!
   [ sec-buf1 $8000 - 512 / 1 + ] literal sec-offs c!
   cart-read ;
 
 : last-root-dir-cluster?
-  root-dir-cluster 2@ $0FFF and $FFFF $0FFF d= ;
+  root-dir-cluster 2@ $0FFF and swap $FFF8 and swap $FFF8 $0FFF d= ;
 
 \ addr1 : direntry
 \ addr2 : filename
@@ -463,9 +498,80 @@ a2i_lut
   until
   drop ;
 
-: copy-short-filename \ TODO
-  1 drop
-  ;
+: ascii2internal    ( c -- c )
+  lit a2i_lut + c@ ;
+
+: copy-short-filename
+  0 char-count !
+  8 0 do
+    de-ptr @ i + c@
+    dup 0= if drop leave then
+    dup $20 = if drop leave then
+    ascii2internal
+    filename @ char-count @ + c!
+    char-count ++
+  loop
+  $0e filename @ char-count @ + c!
+  char-count ++
+  12 8 do
+    de-ptr @ i + c@
+    dup 0= if drop leave then
+    dup $20 = if drop leave then
+    ascii2internal
+    filename @ char-count @ + c!
+    char-count ++
+  loop ;
+
+: load-file-sector
+  current-file-cluster 2@ cluster-to-sector
+  sector-in-cluster @ 0 d+
+  swap sec-num 2!
+  [ sec-buf1 $8000 - 512 / ] literal sec-offs c!
+  1 sec-cnt c!
+  cart-read
+  0 byte-in-sector !
+  sector-in-cluster ++ ;
+
+: peek-byte
+  byte-in-sector @ 512 = if
+    sector-in-cluster @ sectors-per-cluster c@ = if
+      find-next-file-cluster
+      0 sector-in-cluster !
+    then
+    load-file-sector
+  then ;
+
+: load-byte     ( -- c )
+  peek-byte
+  sec-buf1 byte-in-sector @ + c@
+  byte-in-file 2@ 1 0 d+ byte-in-file 2!
+  byte-in-sector ++ ;
+
+: load-word     ( -- u )
+  load-byte load-byte 8 lshift or ;
+
+: copy-byte     ( c addr -- )
+[code]
+ jsr bin_loader
+ jmp next
+[end-code] ;
+
+: copy-block    ( c addr -- )
+[code]
+ jsr bin_loader_block
+ jmp next
+[end-code] ;
+
+: binary-run
+[code]
+ jmp bin_run
+[end-code] ;
+
+: binary-init
+[code]
+ jsr bin_init
+ jmp next
+[end-code] ;
 
 : clear-screen
 [code]
@@ -487,12 +593,6 @@ cls_loop
  ldx z
  jmp next
 [end-code] ;
-
-: 2drop
-  drop drop ;
-
-: 2dup
-  over over ;
 
 : highlight-line    ( addr -- )
 [code]
@@ -687,6 +787,17 @@ internal2lowercase_done
     largest @ max-heapify
   then ;
 
+: min
+  over over u< if drop else nip then ;
+
+: debug  ( n -- )
+[code]
+ lda pstack,x
+ inx
+ inx
+ jmp next
+[end-code] ;
+
 : main
   \ wait for $A000-$BFFF loading to complete
   w8-cart-read
@@ -774,17 +885,21 @@ internal2lowercase_done
           copy-short-filename
         then
 
-        \ file's 1st sector: 1st_data_sector + (1st_cluster-2)*sectors_per_cluster
+        \ save file's 1st cluster
         de-ptr @ direntry-1st-clus-lo + @
         de-ptr @ direntry-1st-clus-hi + @
         first-clusters total-files @ 2 lshift + 2!
+
+        \ save file's size
+        de-ptr @ direntry-file-size + 2@ swap
+        file-sizes total-files @ 2 lshift + 2!
 
         total-files ++
       then
       de-ptr @ direntry-attrs + c@ prev-de-attrs c!
       de-ptr @ direntry-size + de-ptr !
     repeat
-    direntry-sector-counter @ sectors-per-cluster @ = if
+    direntry-sector-counter @ sectors-per-cluster c@ = if
       find-next-root-dir-cluster
       last-root-dir-cluster? if -1 de-scan-finished? ! then
       0 direntry-sector-counter !
@@ -810,36 +925,118 @@ internal2lowercase_done
   regenerate-dlist
   switch-dlist
 
+  \ select file
+  0 play-movie? !
+  0 execute-binary? !
   calc-selected-line-address highlight-line
-
   begin
-    get-char dup
-    $9B = not while
-    dup $1C = if select-previous then   \ [Control] + [Up]
-    dup $2D = if select-previous then   \ '-'
-    dup $1D = if select-next then       \ [Control] + [Down]
-    dup $3D = if select-next then       \ '='
-    drop
-  repeat drop
+    get-char
+    dup $50 = if -1 play-movie? ! then      \ 'p'
+    dup $45 = if -1 execute-binary? ! then  \ 'e'
+    dup $1C = if select-previous then       \ [Control] + [Up]
+    dup $2D = if select-previous then       \ '-'
+    dup $1D = if select-next then           \ [Control] + [Down]
+        $3D = if select-next then           \ '='
+    play-movie? @ execute-binary? @ or
+  until
 
-  \ switch to dlist_2
-  $00 sdmctl c!
-  lit dlist_2 dladr !
-  $22 sdmctl c!
-
-  \ run selected file
+  \ find selected file's 1st cluster
   filename-indexes selected-file-index @ + c@ 2 lshift
   first-clusters + 2@
-  2 0 d- sectors-per-cluster c@ mul-8-32
-  first-data-sector 2@ d+
-  $10 0 d-
-  swap sec-num 2!
+  current-file-cluster 2!
 
-  8 consol c!
+  \ find selected file's size
+  filename-indexes selected-file-index @ + c@ 2 lshift
+  file-sizes + 2@
+  selected-file-size 2!
 
-  500 0 do 1 drop loop
+  play-movie? @ if
+    \ switch to dlist_2
+    $00 sdmctl c!
+    lit dlist_2 dladr !
+    $22 sdmctl c!
 
-  return
+    \ set selected file's 1st sector
+    current-file-cluster 2@ cluster-to-sector
+    $10 0 d-
+    swap sec-num 2!
+
+    8 consol c!
+    500 0 do 1 drop loop
+
+    return
+  then
+
+  execute-binary? @ if
+    \ copy binary loader to internal memory
+    lit bin_loader_start lit bin_loader lit bin_loader_length cmove
+
+    \ switch display list
+    lit screen_binload [ 40 24 * ] literal $00 fill
+    $00 sdmctl c!
+    lit dlist_binload dladr !
+    $22 sdmctl c!
+
+    \ load & execute executable file
+    0 0 byte-in-file 2!
+    512 byte-in-sector !
+    0 sector-in-cluster !
+    $FFFF first-block !
+    load-file-sector
+    begin
+      \ run first block on EOF
+      byte-in-file 2@ selected-file-size 2@ d= if
+        first-block @ runad !
+        binary-run
+      then
+
+      load-word
+      dup $FFFF = if drop load-word then
+      byte-ptr !
+      load-word block-end !
+
+      first-block @ $FFFF = if
+        byte-ptr @ first-block !
+      then
+
+      0 runad !
+      0 initad !
+
+      ( begin
+        load-byte byte-ptr @ copy-byte
+        byte-ptr @ dup 1+ byte-ptr !
+        block-end @ =
+      until )
+
+      begin
+        peek-byte
+        512 byte-in-sector @ -
+        block-end @ 1+ byte-ptr @ - min
+        256 min
+        dup chunk-length !
+        \ 1 debug
+        if
+          sec-buf1 byte-in-sector @ + copy-buffer chunk-length @ cmove
+          \ 2 debug
+          chunk-length @ byte-ptr @ copy-block
+          \ 3 debug
+          chunk-length @ byte-ptr @ + byte-ptr !
+          chunk-length @ byte-in-sector @ + byte-in-sector !
+          chunk-length @ 0 byte-in-file 2@ d+ byte-in-file 2!
+        then
+        byte-ptr @ block-end @ u>
+      until
+      \ 4 debug
+
+      runad @ if
+        binary-run
+      else
+        initad @ if
+          binary-init
+        then
+      then
+    again
+  then
 
   ( begin again ) ;
 
@@ -861,4 +1058,91 @@ dlist_2
  dta $41,a(dlist_2)
 empty
  :40 dta 0
+
+bin_loader_start equ *
+
+ org r:$1000
+
+bin_loader
+ jsr disable_cart
+ lda pstack,x
+ inx
+ sta w
+ lda pstack,x
+ inx
+ sta w+1
+ lda pstack,x
+ inx
+ inx
+ ldy #0
+ sta (w),y
+ jsr enable_cart
+ rts
+
+bin_loader_block
+ jsr disable_cart
+ lda pstack,x
+ inx
+ sta w
+ lda pstack,x
+ inx
+ sta w+1
+ lda pstack,x
+ inx
+ inx
+ sta cntr
+ ldy #0
+bin_loader_block_loop
+ lda copy_buffer,y
+ sta (w),y
+ iny
+ cpy cntr
+ bne bin_loader_block_loop
+ jsr enable_cart
+ rts
+
+bin_run
+ jsr disable_cart
+ pla
+ pla
+ jmp ($2E0)
+
+bin_init
+ jsr disable_cart
+ lda $2E3
+ pha
+ lda $2E2
+ pha
+ rts
+ jsr enable_cart
+ rts
+
+enable_cart
+ sei
+ lda #$C0
+ sta $D5EF
+ lda $D013
+ sta $3FA
+ cli
+ rts
+
+disable_cart
+ sei
+ lda #0
+ sta $D5EF
+ lda $D013
+ sta $3FA
+ cli
+ rts
+
+dlist_binload
+ dta $70,$70,$70
+ dta $42,a(screen_binload)
+ :23 dta $02
+ dta $41,a(dlist_binload)
+screen_binload equ *
+ org *+40*24
+
+bin_loader_length equ *-bin_loader
+ ert bin_loader_start+bin_loader_length>=file_sizes
 [end-code]

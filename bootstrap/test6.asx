@@ -1,0 +1,22 @@
+	opt	h+f+
+
+ptr	equ	$90
+scr	equ	$92
+
+	org	$8000
+start
+	mwa	$230		ptr
+	ldy	#4
+	mva	(ptr),y+	scr
+	mva	(ptr),y 	scr+1
+
+	ldy	#0
+	mva	#$16		(scr),y
+
+loop
+	mva	^4b		^1a
+	jmp	loop
+
+	run	start
+
+	end
