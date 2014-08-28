@@ -1014,19 +1014,19 @@ internal2lowercase_done
         block-end @ 1+ byte-ptr @ - min
         256 min
         dup chunk-length !
-        \ 1 debug
+        1 debug
         if
           sec-buf1 byte-in-sector @ + copy-buffer chunk-length @ cmove
-          \ 2 debug
+          2 debug
           chunk-length @ byte-ptr @ copy-block
-          \ 3 debug
+          3 debug
           chunk-length @ byte-ptr @ + byte-ptr !
           chunk-length @ byte-in-sector @ + byte-in-sector !
           chunk-length @ 0 byte-in-file 2@ d+ byte-in-file 2!
         then
         byte-ptr @ block-end @ u>
       until
-      \ 4 debug
+      4 debug
 
       runad @ if
         binary-run
@@ -1109,13 +1109,11 @@ bin_run
 
 bin_init
  jsr disable_cart
- lda $2E3
- pha
- lda $2E2
- pha
- rts
+ jsr jmp_init
  jsr enable_cart
  rts
+jmp_init
+ jmp ($2E2)
 
 enable_cart
  sei
