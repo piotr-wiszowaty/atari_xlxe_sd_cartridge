@@ -989,30 +989,23 @@ internal2lowercase_done
     lit dlist_binload dladr !
     $22 sdmctl c!
 
-    \ load & execute executable file
+    \ load & run executable file
     0 0 byte-in-file 2!
     512 byte-in-sector !
     0 sector-in-cluster !
-    $FFFF first-block !
+    0 runad !
     load-file-sector
     begin
-      \ run first block on EOF
-      byte-in-file 2@ selected-file-size 2@ d= if
-        first-block @ runad !
-        binary-run
-      then
-
       load-word
       dup $FFFF = if drop load-word then
       byte-ptr !
       load-word block-end !
 
-      first-block @ $FFFF = if
-        byte-ptr @ first-block !
+      runad @ 0= if
+        byte-ptr @ runad !
       then
 
-      0 runad !
-      0 initad !
+      lit dummy_init initad !
 
       ( begin
         load-byte byte-ptr @ copy-byte
@@ -1040,13 +1033,8 @@ internal2lowercase_done
       until
       4 debug
 
-      runad @ if
-        binary-run
-      else
-        initad @ if
-          binary-init
-        then
-      then
+      binary-init
+      byte-in-file 2@ selected-file-size 2@ d= if binary-run then
     again
   then
 
@@ -1165,6 +1153,9 @@ disable_cart
  lda $D013
  sta $3FA
  cli
+ rts
+
+dummy_init
  rts
 
 dlist_binload
