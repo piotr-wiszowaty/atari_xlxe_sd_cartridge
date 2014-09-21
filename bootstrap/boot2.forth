@@ -573,6 +573,12 @@ a2i_lut
  jmp next
 [end-code] ;
 
+: memory-clear
+[code]
+ jsr mem_clear
+ jmp next
+[end-code] ;
+
 : clear-screen
 [code]
  lda pstack,x+
@@ -971,6 +977,8 @@ internal2lowercase_done
     \ copy binary loader to internal memory
     lit bin_loader_start lit bin_loader lit bin_loader_length cmove
 
+    memory-clear
+
     \ switch display list
     lit screen_binload [ 40 24 * ] literal $00 fill
     $00 sdmctl c!
@@ -1114,6 +1122,25 @@ bin_init
  rts
 jmp_init
  jmp ($2E2)
+
+; zero-fill memory $2000-$BFFF
+mem_clear
+ jsr disable_cart
+ lda #$20
+ sta mem_clear_loop_i+2
+mem_clear_loop_o
+ lda #0
+ ldy #0
+mem_clear_loop_i
+ sta $2000,y
+ iny
+ bne mem_clear_loop_i
+ inc mem_clear_loop_i+2
+ lda #$C0
+ cmp mem_clear_loop_i+2
+ bne mem_clear_loop_o
+ jsr enable_cart
+ rts
 
 enable_cart
  sei
