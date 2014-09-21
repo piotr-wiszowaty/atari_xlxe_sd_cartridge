@@ -689,6 +689,7 @@ uhl_loop
 
 : return
 [code]
+ lda #$40
  sta $D40E
  lda #124
 ret_w8_1
@@ -1053,6 +1054,7 @@ internal2lowercase_done
 
  org $A006+4
  sei
+ lda #$40
  sta $D40E
  lda #124
  cmp:rne $D40B
