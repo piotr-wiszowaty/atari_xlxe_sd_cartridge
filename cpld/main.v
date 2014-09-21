@@ -24,8 +24,8 @@ module main(
     input cart_s5,
     input cart_rw,
     input cart_cctl,
-    output cart_rd4,
-    output cart_rd5,
+    output reg cart_rd4 = 1,
+    output reg cart_rd5 = 1,
     input [12:0] cart_addr,
     inout [7:0] cart_data,
     output ram_oe,
@@ -156,7 +156,7 @@ always @(posedge clk) begin
     if (state_cart_read & phase == 2'b10)
         cart_out_data_latch <= ram_data;
 
-    if (cart_write_enable & cart_d5_select & state_cart_write & phase == 2'b10 & cart_addr[2:0] == 3'b111)
+    if (cart_d5_select & state_cart_write & phase[1] & cart_addr[2:0] == 3'b111)
         {rd5_r, rd4_r} <= cart_data[7:6];
 
     if (state_uc_read & phase == 2'b10)
@@ -166,6 +166,9 @@ always @(posedge clk) begin
         uc_ack <= 1;
     else if (~uc_write & ~uc_read)
         uc_ack <= 0;
+
+    if (fi2_rising & ~cart_select)
+        {cart_rd5, cart_rd4} <= {rd5_r, rd4_r};
 end
 
 assign ram_oe = ~(state_cart_read | state_uc_read);
@@ -175,8 +178,5 @@ assign dbg0 = state_uc_read;
 assign dbg1 = ram_oe;
 assign aux0 = rd4_r;
 assign aux1 = rd5_r;
-
-assign cart_rd4 = rd4_r;
-assign cart_rd5 = rd5_r;
 
 endmodule
