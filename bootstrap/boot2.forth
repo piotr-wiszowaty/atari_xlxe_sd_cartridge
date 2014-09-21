@@ -1102,8 +1102,28 @@ bin_loader_block_loop
  jsr enable_cart
  rts
 
+cio0
+ sta $342
+ ldx #0
+ jmp $E456
+
+ename dta c'E:',$9B
+
 bin_run
  jsr disable_cart
+ ; open screen
+ lda #12 ; close
+ jsr cio0
+ ; set RAMTOP
+ lda #$C0
+ sta $6A
+ ; open editor
+ lda #<ename
+ sta $344
+ lda #>ename
+ sta $345
+ lda #3 ; open
+ jsr cio0
  pla
  pla
  jmp ($2E0)
