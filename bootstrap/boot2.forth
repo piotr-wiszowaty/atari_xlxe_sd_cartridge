@@ -975,6 +975,9 @@ internal2lowercase_done
   then
 
   execute-binary? @ if
+    $FF $D301 c!        \ turn off Basic ROM
+    $01 $3F8 c!         \ BASICF (0 = enabled)
+
     \ copy binary loader to internal memory
     lit bin_loader_start lit bin_loader lit bin_loader_length cmove
 
