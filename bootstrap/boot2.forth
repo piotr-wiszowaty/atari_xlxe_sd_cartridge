@@ -1119,6 +1119,7 @@ enable_cart
  sei
  lda #$C0
  sta $D5EF
+ nop
  lda $D013
  sta $3FA
  cli
@@ -1128,6 +1129,7 @@ disable_cart
  sei
  lda #0
  sta $D5EF
+ nop
  lda $D013
  sta $3FA
  cli
