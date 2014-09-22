@@ -86,7 +86,7 @@ variable current
 variable largest
 variable heap-size
 variable play-movie?
-variable execute-binary?
+variable execute-com?
 create line-addresses 256 cells allot
 create filename-indexes 256 allot
 create first-clusters 256 4 * allot
@@ -552,24 +552,30 @@ a2i_lut
 
 : copy-byte     ( c addr -- )
 [code]
- jsr bin_loader
+ jsr com_loader
  jmp next
 [end-code] ;
 
 : copy-block    ( c addr -- )
 [code]
- jsr bin_loader_block
+ jsr com_loader_block
  jmp next
 [end-code] ;
 
-: binary-run
+: com-run
 [code]
- jmp bin_run
+ jmp do_com_run
 [end-code] ;
 
-: binary-init
+: com-init
 [code]
- jsr bin_init
+ jsr do_com_init
+ jmp next
+[end-code] ;
+
+: reopen-editor
+[code]
+ jsr do_reopen_editor
  jmp next
 [end-code] ;
 
@@ -934,17 +940,17 @@ internal2lowercase_done
 
   \ select file
   0 play-movie? !
-  0 execute-binary? !
+  0 execute-com? !
   calc-selected-line-address highlight-line
   begin
     get-char
     dup $50 = if -1 play-movie? ! then      \ 'p'
-    dup $45 = if -1 execute-binary? ! then  \ 'e'
+    dup $45 = if -1 execute-com? ! then     \ 'e'
     dup $1C = if select-previous then       \ [Control] + [Up]
     dup $2D = if select-previous then       \ '-'
     dup $1D = if select-next then           \ [Control] + [Down]
         $3D = if select-next then           \ '='
-    play-movie? @ execute-binary? @ or
+    play-movie? @ execute-com? @ or
   until
 
   \ find selected file's 1st cluster
@@ -974,14 +980,15 @@ internal2lowercase_done
     return
   then
 
-  execute-binary? @ if
+  execute-com? @ if
     $FF $D301 c!        \ turn off Basic ROM
     $01 $3F8 c!         \ BASICF (0 = enabled)
 
     \ copy binary loader to internal memory
-    lit bin_loader_start lit bin_loader lit bin_loader_length cmove
+    lit com_loader_start lit com_loader lit com_loader_length cmove
 
     memory-clear
+    reopen-editor
 
     \ switch display list
     lit screen_binload [ 40 24 * ] literal $00 fill
@@ -1033,8 +1040,8 @@ internal2lowercase_done
       until
       4 debug
 
-      binary-init
-      byte-in-file 2@ selected-file-size 2@ d= if binary-run then
+      com-init
+      byte-in-file 2@ selected-file-size 2@ d= if com-run then
     again
   then
 
@@ -1060,11 +1067,11 @@ dlist_2
 empty
  :40 dta 0
 
-bin_loader_start equ *
+com_loader_start equ *
 
  org r:$1000
 
-bin_loader
+com_loader
  jsr disable_cart
  lda pstack,x
  inx
@@ -1080,7 +1087,7 @@ bin_loader
  jsr enable_cart
  rts
 
-bin_loader_block
+com_loader_block
  jsr disable_cart
  lda pstack,x
  inx
@@ -1093,12 +1100,12 @@ bin_loader_block
  inx
  sta cntr
  ldy #0
-bin_loader_block_loop
+com_loader_block_loop
  lda copy_buffer,y
  sta (w),y
  iny
  cpy cntr
- bne bin_loader_block_loop
+ bne com_loader_block_loop
  jsr enable_cart
  rts
 
@@ -1152,14 +1159,9 @@ cio0
 
 ename dta c'E:',$9B
 
-bin_run
+do_reopen_editor
  jsr disable_cart
- ;jsr dump_memory
- ; SIO COMMAND := L (for debugging)
- ;lda $D303
- ;and #$F7
- ;sta $D303
- ; open screen
+ ; close editor
  lda #12 ; close
  jsr cio0
  ; set RAMTOP
@@ -1172,11 +1174,21 @@ bin_run
  sta $345
  lda #3 ; open
  jsr cio0
+ jsr enable_cart
+ rts
+
+do_com_run
+ jsr disable_cart
+ ;jsr dump_memory
+ ; SIO COMMAND := L (for debugging)
+ ;lda $D303
+ ;and #$F7
+ ;sta $D303
  pla
  pla
  jmp ($2E0)
 
-bin_init
+do_com_init
  jsr disable_cart
  jsr jmp_init
  jsr enable_cart
@@ -1234,6 +1246,6 @@ dlist_binload
 screen_binload equ *
  org *+40*24
 
-bin_loader_length equ *-bin_loader
- ert bin_loader_start+bin_loader_length>=file_sizes
+com_loader_length equ *-com_loader
+ ert com_loader_start+com_loader_length>=file_sizes
 [end-code]
