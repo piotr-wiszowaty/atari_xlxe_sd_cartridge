@@ -87,6 +87,7 @@ variable largest
 variable heap-size
 variable play-movie?
 variable execute-com?
+variable os-dlist
 create line-addresses 256 cells allot
 create filename-indexes 256 allot
 create first-clusters 256 4 * allot
@@ -989,6 +990,7 @@ internal2lowercase_done
 
     memory-clear
     reopen-editor
+    dladr @ os-dlist !  \ save display list address
 
     \ switch display list
     lit screen_binload [ 40 24 * ] literal $00 fill
@@ -1041,7 +1043,16 @@ internal2lowercase_done
       4 debug
 
       com-init
-      byte-in-file 2@ selected-file-size 2@ d= if com-run then
+
+      byte-in-file 2@ selected-file-size 2@ d= if
+        \ restore saved display list address
+        $00 sdmctl c!
+        os-dlist @ dladr !
+        $22 sdmctl c!
+
+        \ run loaded .com file
+        com-run
+      then
     again
   then
 
