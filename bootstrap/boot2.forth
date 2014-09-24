@@ -1063,7 +1063,7 @@ internal2lowercase_done
 
  org $A006+4
  sei
- lda #$40
+ lda #$00
  sta $D40E
  lda #124
  cmp:rne $D40B
