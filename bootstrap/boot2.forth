@@ -87,7 +87,6 @@ variable largest
 variable heap-size
 variable play-movie?
 variable execute-com?
-variable os-dlist
 create line-addresses 256 cells allot
 create filename-indexes 256 allot
 create first-clusters 256 4 * allot
@@ -580,9 +579,15 @@ a2i_lut
  jmp next
 [end-code] ;
 
+: copy-display-list
+[code]
+ jsr do_copy_display_list
+ jmp next
+[end-code] ;
+
 : memory-clear
 [code]
- jsr mem_clear
+ jsr do_memory_clear
  jmp next
 [end-code] ;
 
@@ -985,18 +990,12 @@ internal2lowercase_done
     $FF $D301 c!        \ turn off Basic ROM
     $01 $3F8 c!         \ BASICF (0 = enabled)
 
-    \ copy binary loader to internal memory
+    \ copy .com loader to internal memory
     lit com_loader_start lit com_loader lit com_loader_length cmove
 
     memory-clear
     reopen-editor
-    dladr @ os-dlist !  \ save display list address
-
-    \ switch display list
-    lit screen_binload [ 40 24 * ] literal $00 fill
-    $00 sdmctl c!
-    lit dlist_binload dladr !
-    $22 sdmctl c!
+    copy-display-list
 
     \ load & run executable file
     0 0 byte-in-file 2!
@@ -1043,16 +1042,7 @@ internal2lowercase_done
       4 debug
 
       com-init
-
-      byte-in-file 2@ selected-file-size 2@ d= if
-        \ restore saved display list address
-        $00 sdmctl c!
-        os-dlist @ dladr !
-        $22 sdmctl c!
-
-        \ run loaded .com file
-        com-run
-      then
+      byte-in-file 2@ selected-file-size 2@ d= if com-run then
     again
   then
 
@@ -1207,8 +1197,34 @@ do_com_init
 jmp_init
  jmp ($2E2)
 
+; copy OS-generated display list to cartridge memory
+do_copy_display_list
+ lda #<$BC00
+ sta tmp
+ lda #>$BC00
+ sta tmp+1
+copy_dlist_page_loop
+ ldy #0
+ jsr disable_cart
+copy_dlist_to_internal_loop
+ lda (tmp),y
+ sta copy_buffer,y
+ iny
+ bne copy_dlist_to_internal_loop
+ jsr enable_cart
+copy_dlist_to_cart_loop
+ lda copy_buffer,y
+ sta (tmp),y
+ iny
+ bne copy_dlist_to_cart_loop
+ inc tmp+1
+ lda #$C0
+ cmp tmp+1
+ bne copy_dlist_page_loop
+ rts
+
 ; zero-fill memory $2000-$BFFF
-mem_clear
+do_memory_clear
  jsr disable_cart
  lda #$20
  sta mem_clear_loop_i+2
@@ -1248,14 +1264,6 @@ disable_cart
 
 dummy_init
  rts
-
-dlist_binload
- dta $70,$70,$70
- dta $42,a(screen_binload)
- :23 dta $02
- dta $41,a(dlist_binload)
-screen_binload equ *
- org *+40*24
 
 com_loader_length equ *-com_loader
  ert com_loader_start+com_loader_length>=file_sizes
