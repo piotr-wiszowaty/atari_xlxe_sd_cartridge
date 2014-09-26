@@ -1191,7 +1191,11 @@ do_com_run
 
 do_com_init
  jsr disable_cart
+ txa
+ pha
  jsr jmp_init
+ pla
+ tax
  jsr enable_cart
  rts
 jmp_init
