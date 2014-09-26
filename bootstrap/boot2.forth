@@ -65,6 +65,7 @@ $1C constant direntry-file-size
 variable cursor
 create negative 0 c,
 create msg1 ,' unknown FAT type'
+create error-message-loader-overwrite ,' ERROR: attempted loader overwrite'
 create fs-type 0 c,
 create sectors-per-cluster 0 c,
 2variable part0-1st-sector
@@ -579,12 +580,6 @@ a2i_lut
  jmp next
 [end-code] ;
 
-: copy-display-list
-[code]
- jsr do_copy_display_list
- jmp next
-[end-code] ;
-
 : memory-clear
 [code]
  jsr do_memory_clear
@@ -817,6 +812,57 @@ internal2lowercase_done
  jmp next
 [end-code] ;
 
+: u>= [label] u_gt_eq u< not ;
+
+: u<= [label] u_lt_eq u> not ;
+
+: reinitialize-display
+[code]
+ ; disable interrupts
+ sei
+ lda #$00
+ sta $D40E
+ ; wait for vertical blank
+ inc $D40E
+ lda $D40B
+ bne *-3
+ ; set display list address
+ lda <$BC20
+ sta $D402
+ lda >$BC20
+ sta $D403
+ ; use font in ROM
+ lda #$E0
+ sta $D409
+ ; set default system colors
+ lda #$00
+ sta $D012
+ sta $D013
+ sta $D014
+ sta $D015
+ lda #$28
+ sta $D016
+ lda #$CA
+ sta $D017
+ lda #$94
+ sta $D018
+ lda #$46
+ sta $D019
+ lda #$00
+ sta $D01A
+ jmp next
+[end-code] ;
+
+: c!+           ( c addr -- )
+  [label] c_store_plus
+  swap over @ c!
+  dup @ 1+ swap ! ;
+
+: !+            ( u addr -- )
+  [label] store_plus
+  swap over @ !
+  dup @ 2 + swap ! ;
+
 : main
   \ wait for $A000-$BFFF loading to complete
   w8-cart-read
@@ -994,8 +1040,25 @@ internal2lowercase_done
     lit com_loader_start lit com_loader lit com_loader_length cmove
 
     memory-clear
+
+    \ build mirror of OS display list
+    $BC20 byte-ptr !
+    $70 byte-ptr c!+
+    $70 byte-ptr c!+
+    $70 byte-ptr c!+
+    $42 byte-ptr c!+
+    $BC40 byte-ptr !+
+    23 0 do $02 byte-ptr c!+ loop
+    $41 byte-ptr c!+
+    $BC20 byte-ptr !+
+    $00 byte-ptr c!+
+    $00 byte-ptr c!+
+    $80 byte-ptr c!+
+    byte-ptr @ [ 40 24 * 3 - ] literal 0 fill
+
+    debug 5
+
     reopen-editor
-    copy-display-list
 
     \ load & run executable file
     0 0 byte-in-file 2!
@@ -1008,6 +1071,16 @@ internal2lowercase_done
       dup $FFFF = if drop load-word then
       byte-ptr !
       load-word block-end !
+
+      byte-ptr @ copy-buffer u<= block-end @ copy-buffer u>= and
+      byte-ptr @ copy-buffer 256 + u<= block-end @ copy-buffer 256 + u>= and or
+      byte-ptr @ lit com_loader u<= block-end @ lit com_loader u>= and or
+      byte-ptr @ lit com_loader_end u<= block-end @ lit com_loader_end u>= and or
+      if
+        reinitialize-display
+        error-message-loader-overwrite count $BC40 swap cmove
+        begin again
+      then
 
       runad @ 0= if
         byte-ptr @ runad !
@@ -1201,32 +1274,6 @@ do_com_init
 jmp_init
  jmp ($2E2)
 
-; copy OS-generated display list to cartridge memory
-do_copy_display_list
- lda #<$BC00
- sta tmp
- lda #>$BC00
- sta tmp+1
-copy_dlist_page_loop
- ldy #0
- jsr disable_cart
-copy_dlist_to_internal_loop
- lda (tmp),y
- sta copy_buffer,y
- iny
- bne copy_dlist_to_internal_loop
- jsr enable_cart
-copy_dlist_to_cart_loop
- lda copy_buffer,y
- sta (tmp),y
- iny
- bne copy_dlist_to_cart_loop
- inc tmp+1
- lda #$C0
- cmp tmp+1
- bne copy_dlist_page_loop
- rts
-
 ; zero-fill memory $2000-$BFFF
 do_memory_clear
  jsr disable_cart
@@ -1268,6 +1315,8 @@ disable_cart
 
 dummy_init
  rts
+
+com_loader_end
 
 com_loader_length equ *-com_loader
  ert com_loader_start+com_loader_length>=file_sizes
