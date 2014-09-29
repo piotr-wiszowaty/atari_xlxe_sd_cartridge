@@ -14,7 +14,7 @@ $022F constant sdmctl
 $0230 constant dladr
 $02E0 constant runad
 $02E2 constant initad
-$0800 constant copy-buffer
+$1F00 constant copy-buffer
 $5000 constant screen
 $A600 constant file-sizes
 $AA00 constant sec-buf1
@@ -1060,8 +1060,6 @@ internal2lowercase_done
     $80 byte-ptr c!+
     byte-ptr @ [ 40 24 * 3 - ] literal 0 fill
 
-    debug 5
-
     reopen-editor
 
     \ load & run executable file
@@ -1076,10 +1074,8 @@ internal2lowercase_done
       byte-ptr !
       load-word block-end !
 
-      byte-ptr @ copy-buffer u<= block-end @ copy-buffer u>= and
-      byte-ptr @ copy-buffer 256 + u<= block-end @ copy-buffer 256 + u>= and or
-      byte-ptr @ lit com_loader u<= block-end @ lit com_loader u>= and or
-      byte-ptr @ lit com_loader_end u<= block-end @ lit com_loader_end u>= and or
+      byte-ptr @ [ copy-buffer 256 + ] literal u<
+      block-end @ lit com_loader u>= and
       if
         reinitialize-display
         error-message-loader-overwrite count $BC40 swap cmove
@@ -1104,19 +1100,15 @@ internal2lowercase_done
         block-end @ 1+ byte-ptr @ - min
         256 min
         dup chunk-length !
-        1 debug
         if
           sec-buf1 byte-in-sector @ + copy-buffer chunk-length @ cmove
-          2 debug
           chunk-length @ byte-ptr @ copy-block
-          3 debug
           chunk-length @ byte-ptr @ + byte-ptr !
           chunk-length @ byte-in-sector @ + byte-in-sector !
           chunk-length @ 0 byte-in-file 2@ d+ byte-in-file 2!
         then
         byte-ptr @ block-end @ u>
       until
-      4 debug
 
       com-init
       byte-in-file 2@ selected-file-size 2@ d= if com-run then
@@ -1317,6 +1309,8 @@ dummy_init
  rts
 
 com_loader_end
+
+ ert com_loader_end>=copy_buffer
 
 com_loader_length equ *-com_loader
  ert com_loader_start+com_loader_length>=file_sizes
