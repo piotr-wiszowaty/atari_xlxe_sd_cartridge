@@ -570,13 +570,17 @@ a2i_lut
 
 : com-init
 [code]
+ stx tmp
  jsr do_com_init
+ ldx tmp
  jmp next
 [end-code] ;
 
 : reopen-editor
 [code]
+ stx tmp
  jsr do_reopen_editor
+ ldx tmp
  jmp next
 [end-code] ;
 
@@ -1264,11 +1268,7 @@ do_com_run
 
 do_com_init
  jsr disable_cart
- txa
- pha
  jsr jmp_init
- pla
- tax
  jsr enable_cart
  rts
 jmp_init
