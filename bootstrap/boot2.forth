@@ -14,7 +14,7 @@ $022F constant sdmctl
 $0230 constant dladr
 $02E0 constant runad
 $02E2 constant initad
-$1F00 constant copy-buffer
+$1300 constant copy-buffer
 $5000 constant screen
 $A600 constant file-sizes
 $AA00 constant sec-buf1
