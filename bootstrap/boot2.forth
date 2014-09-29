@@ -854,6 +854,12 @@ internal2lowercase_done
  sta $D019
  lda #$00
  sta $D01A
+ ; screen width
+ lda #$22
+ sta $D400
+ ; font mirror
+ lda #$02
+ sta $D401
  jmp next
 [end-code] ;
 
