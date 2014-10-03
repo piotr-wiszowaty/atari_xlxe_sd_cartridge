@@ -351,7 +351,7 @@ int main()
 			YELLOW_LED_ON;
 
 			// find executable file on SD card
-			if ((sector = fat_find_first_sector("boot.xex")) == 0) {
+			if ((sector = fat_find_first_sector("boot.obx")) == 0) {
 				error = 1;
 				RED_LED_ON;
 				continue;
