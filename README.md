@@ -139,8 +139,8 @@ Boot algorithm:
 
 1. Write Atari bootstrap code to buffer RAM at `$BF00`
 2. Initialize SD card
-3. Find Atari executable file boot.xex on the SD card
-4. Write boot.xex first sector number to buffer RAM at `$D5EB..$D5ED`
+3. Find Atari executable file boot.obx on the SD card
+4. Write boot.obx first sector number to buffer RAM at `$D5EB..$D5ED`
 5. Execute main loop
 
 Main loop:
