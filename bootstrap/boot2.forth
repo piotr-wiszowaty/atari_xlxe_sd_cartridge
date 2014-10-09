@@ -1185,49 +1185,6 @@ com_loader_block_loop
  jsr enable_cart
  rts
 
-;ddevic equ $0300
-;dunit  equ $0301
-;dcmnd  equ $0302
-;dstats equ $0303
-;dbufa  equ $0304
-;dtimlo equ $0306
-;dunuse equ $0307
-;dbyt   equ $0308
-;daux1  equ $030A
-;daux2  equ $030B
-;jsioint equ $E459
-;
-;page dta 0
-;
-;dump_memory
-; lda #$00
-; sta daux1
-; lda page
-; sta daux2
-; lda #$31
-; sta ddevic
-; lda #$01
-; sta dunit
-; lda #$80
-; sta dstats
-; lda #$00
-; sta dbufa+0
-; lda page
-; sta dbufa+1
-; lda #$08
-; sta dtimlo
-; lda #$00
-; sta dbyt+0
-; lda #$01
-; sta dbyt+1
-; jsr jsioint
-; bmi dump_memory
-; inc page
-; lda #$FF
-; cmp page
-; bne dump_memory
-; rts
-
 cio0
  sta $342
  ldx #0
