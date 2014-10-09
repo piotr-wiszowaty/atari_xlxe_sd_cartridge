@@ -1212,11 +1212,6 @@ do_reopen_editor
 
 do_com_run
  jsr disable_cart
- ;jsr dump_memory
- ; SIO COMMAND := L (for debugging)
- ;lda $D303
- ;and #$F7
- ;sta $D303
  pla
  pla
  jmp ($2E0)
