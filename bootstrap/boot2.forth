@@ -551,15 +551,9 @@ a2i_lut
 : load-word     ( -- u )
   load-byte load-byte 8 lshift or ;
 
-: copy-byte     ( c addr -- )
-[code]
- jsr com_loader
- jmp next
-[end-code] ;
-
 : copy-block    ( c addr -- )
 [code]
- jsr com_loader_block
+ jsr com_loader
  jmp next
 [end-code] ;
 
@@ -1094,12 +1088,6 @@ internal2lowercase_done
 
       lit dummy_init initad !
 
-      ( begin
-        load-byte byte-ptr @ copy-byte
-        byte-ptr @ dup 1+ byte-ptr !
-        block-end @ =
-      until )
-
       begin
         peek-byte
         512 byte-in-sector @ -
@@ -1148,22 +1136,6 @@ com_loader_start equ *
  org r:$1000
 
 com_loader
- jsr disable_cart
- lda pstack,x
- inx
- sta w
- lda pstack,x
- inx
- sta w+1
- lda pstack,x
- inx
- inx
- ldy #0
- sta (w),y
- jsr enable_cart
- rts
-
-com_loader_block
  jsr disable_cart
  lda pstack,x
  inx
