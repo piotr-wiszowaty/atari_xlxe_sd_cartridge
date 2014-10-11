@@ -14,7 +14,7 @@ $022F constant sdmctl
 $0230 constant dladr
 $02E0 constant runad
 $02E2 constant initad
-$1100 constant copy-buffer
+$0800 constant copy-buffer
 $5000 constant screen
 $A600 constant file-sizes
 $AA00 constant sec-buf1
@@ -1040,8 +1040,8 @@ internal2lowercase_done
     $FF $D301 c!        \ turn off Basic ROM
     $01 $3F8 c!         \ BASICF (0 = enabled)
 
-    \ copy .com loader to internal memory
-    lit com_loader_start lit com_loader lit com_loader_length cmove
+    \ copy .com loader setup to internal memory
+    lit com_loader_setup_start lit com_loader_setup lit com_loader_setup_length cmove
 
     memory-clear
 
@@ -1061,6 +1061,9 @@ internal2lowercase_done
     byte-ptr @ [ 40 24 * 3 - ] literal 0 fill
 
     reopen-editor
+
+    \ copy .com loader to internal memory
+    lit com_loader_start lit com_loader lit com_loader_length cmove
 
     \ load & run executable file
     0 0 byte-in-file 2!
@@ -1131,9 +1134,82 @@ dlist_2
 empty
  :40 dta 0
 
-com_loader_start equ *
+com_loader_setup_start equ *
+ org r:$0900
 
- org r:$1000
+com_loader_setup
+
+setup_enable_cart
+ sei
+ lda #$C0
+ sta $D5EF
+ nop
+ lda $D013
+ sta $3FA
+ cli
+ rts
+
+setup_disable_cart
+ sei
+ lda #0
+ sta $D5EF
+ nop
+ lda $D013
+ sta $3FA
+ cli
+ rts
+
+cio0
+ sta $342
+ ldx #0
+ jmp $E456
+
+ename dta c'E:',$9B
+
+do_reopen_editor
+ jsr setup_disable_cart
+ ; close editor
+ lda #12 ; close
+ jsr cio0
+ ; set RAMTOP
+ lda #$C0
+ sta $6A
+ ; open editor
+ lda #<ename
+ sta $344
+ lda #>ename
+ sta $345
+ lda #3 ; open
+ jsr cio0
+ jsr setup_enable_cart
+ rts
+
+; zero-fill memory $1000-$BFFF
+do_memory_clear
+ jsr setup_disable_cart
+ lda #$10
+ sta mem_clear_loop_i+2
+mem_clear_loop_o
+ lda #0
+ ldy #0
+mem_clear_loop_i
+ sta $1000,y
+ iny
+ bne mem_clear_loop_i
+ inc mem_clear_loop_i+2
+ lda #$C0
+ cmp mem_clear_loop_i+2
+ bne mem_clear_loop_o
+ jsr setup_enable_cart
+ rts
+
+com_loader_setup_end
+
+com_loader_setup_length equ *-com_loader_setup
+
+com_loader_start equ com_loader_setup_start+com_loader_setup_length
+
+ org r:$0700
 
 com_loader
  jsr disable_cart
@@ -1157,31 +1233,6 @@ com_loader_block_loop
  jsr enable_cart
  rts
 
-cio0
- sta $342
- ldx #0
- jmp $E456
-
-ename dta c'E:',$9B
-
-do_reopen_editor
- jsr disable_cart
- ; close editor
- lda #12 ; close
- jsr cio0
- ; set RAMTOP
- lda #$C0
- sta $6A
- ; open editor
- lda #<ename
- sta $344
- lda #>ename
- sta $345
- lda #3 ; open
- jsr cio0
- jsr enable_cart
- rts
-
 do_com_run
  jsr disable_cart
  pla
@@ -1195,25 +1246,6 @@ do_com_init
  rts
 jmp_init
  jmp ($2E2)
-
-; zero-fill memory $2000-$BFFF
-do_memory_clear
- jsr disable_cart
- lda #$20
- sta mem_clear_loop_i+2
-mem_clear_loop_o
- lda #0
- ldy #0
-mem_clear_loop_i
- sta $2000,y
- iny
- bne mem_clear_loop_i
- inc mem_clear_loop_i+2
- lda #$C0
- cmp mem_clear_loop_i+2
- bne mem_clear_loop_o
- jsr enable_cart
- rts
 
 enable_cart
  sei
