@@ -1242,6 +1242,8 @@ do_com_run
 do_com_init
  jsr disable_cart
  jsr jmp_init
+ lda #$C0
+ sta $D20E
  jsr enable_cart
  rts
 jmp_init
@@ -1254,7 +1256,6 @@ enable_cart
  nop
  lda $D013
  sta $3FA
- cli
  rts
 
 disable_cart
