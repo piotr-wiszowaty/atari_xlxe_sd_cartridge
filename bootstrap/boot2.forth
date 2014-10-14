@@ -86,8 +86,6 @@ variable right
 variable current
 variable largest
 variable heap-size
-variable play-movie?
-variable execute-com?
 create line-addresses 256 cells allot
 create filename-indexes 256 allot
 create first-clusters 256 4 * allot
@@ -105,7 +103,7 @@ create selected-file-index 0 ,
 variable new-selected-file-index
 create select-window-top-index 0 ,
 create dlist-select 0 ,
-create legend $DC c, $DD c, ' :select file,' ' P'* ' lay,' ' E'* ' xecute             '
+create legend $DC c, $DD c, ' :select file,' ' Return'* ' :load & run        '
 create dlist0
   $70 c, $70 c, $70 c,
   $42 c, screen   0 + ,
@@ -692,21 +690,6 @@ uhl_loop
     selected-file-index @ 1+ update-selection
   then ;
 
-: return
-[code]
- lda #$40
- sta $D40E
- lda #124
-ret_w8_1
- cmp $D40B
- bne ret_w8_1
- lda #123
-ret_w8_2
- cmp $D40B
- bne ret_w8_2
- rts
-[end-code] ;
-
 : line-address-by-index     ( n -- addr )
   1- filename-indexes + c@ cells line-addresses + @ ;
 
@@ -995,19 +978,16 @@ internal2lowercase_done
   switch-dlist
 
   \ select file
-  0 play-movie? !
-  0 execute-com? !
   calc-selected-line-address highlight-line
   begin
-    get-char
-    dup $50 = if -1 play-movie? ! then      \ 'p'
-    dup $45 = if -1 execute-com? ! then     \ 'e'
+    get-char dup
+    $9B = not while
     dup $1C = if select-previous then       \ [Control] + [Up]
     dup $2D = if select-previous then       \ '-'
     dup $1D = if select-next then           \ [Control] + [Down]
-        $3D = if select-next then           \ '='
-    play-movie? @ execute-com? @ or
-  until
+    dup $3D = if select-next then           \ '='
+    drop
+  repeat drop
 
   \ find selected file's 1st cluster
   filename-indexes selected-file-index @ + c@ 2 lshift
@@ -1019,120 +999,83 @@ internal2lowercase_done
   file-sizes + 2@
   selected-file-size 2!
 
-  play-movie? @ if
-    \ switch to dlist_2
-    $00 sdmctl c!
-    lit dlist_2 dladr !
-    $22 sdmctl c!
+  $FF $D301 c!        \ turn off Basic ROM
+  $01 $3F8 c!         \ BASICF (0 = enabled)
 
-    \ set selected file's 1st sector
-    current-file-cluster 2@ cluster-to-sector
-    $10 0 d-
-    swap sec-num 2!
+  \ copy .com loader setup to internal memory
+  lit com_loader_setup_start lit com_loader_setup lit com_loader_setup_length cmove
 
-    8 consol c!
-    500 0 do 1 drop loop
+  memory-clear
 
-    return
-  then
+  \ build mirror of OS display list
+  $BC20 byte-ptr !
+  $70 byte-ptr c!+
+  $70 byte-ptr c!+
+  $70 byte-ptr c!+
+  $42 byte-ptr c!+
+  $BC40 byte-ptr !+
+  23 0 do $02 byte-ptr c!+ loop
+  $41 byte-ptr c!+
+  $BC20 byte-ptr !+
+  $00 byte-ptr c!+
+  $00 byte-ptr c!+
+  $80 byte-ptr c!+
+  byte-ptr @ [ 40 24 * 3 - ] literal 0 fill
 
-  execute-com? @ if
-    $FF $D301 c!        \ turn off Basic ROM
-    $01 $3F8 c!         \ BASICF (0 = enabled)
+  reopen-editor
 
-    \ copy .com loader setup to internal memory
-    lit com_loader_setup_start lit com_loader_setup lit com_loader_setup_length cmove
+  \ copy .com loader to internal memory
+  lit com_loader_start lit com_loader lit com_loader_length cmove
 
-    memory-clear
+  \ load & run executable file
+  0 0 byte-in-file 2!
+  512 byte-in-sector !
+  0 sector-in-cluster !
+  0 runad !
+  load-file-sector
+  begin
+    load-word
+    dup $FFFF = if drop load-word then
+    byte-ptr !
+    load-word block-end !
 
-    \ build mirror of OS display list
-    $BC20 byte-ptr !
-    $70 byte-ptr c!+
-    $70 byte-ptr c!+
-    $70 byte-ptr c!+
-    $42 byte-ptr c!+
-    $BC40 byte-ptr !+
-    23 0 do $02 byte-ptr c!+ loop
-    $41 byte-ptr c!+
-    $BC20 byte-ptr !+
-    $00 byte-ptr c!+
-    $00 byte-ptr c!+
-    $80 byte-ptr c!+
-    byte-ptr @ [ 40 24 * 3 - ] literal 0 fill
+    byte-ptr @ [ copy-buffer 256 + ] literal u<
+    block-end @ lit com_loader u>= and
+    if
+      reinitialize-display
+      error-message-loader-overwrite count $BC40 swap cmove
+      begin again
+    then
 
-    reopen-editor
+    runad @ 0= if
+      byte-ptr @ runad !
+    then
 
-    \ copy .com loader to internal memory
-    lit com_loader_start lit com_loader lit com_loader_length cmove
+    lit dummy_init initad !
 
-    \ load & run executable file
-    0 0 byte-in-file 2!
-    512 byte-in-sector !
-    0 sector-in-cluster !
-    0 runad !
-    load-file-sector
     begin
-      load-word
-      dup $FFFF = if drop load-word then
-      byte-ptr !
-      load-word block-end !
-
-      byte-ptr @ [ copy-buffer 256 + ] literal u<
-      block-end @ lit com_loader u>= and
+      peek-byte
+      512 byte-in-sector @ -
+      block-end @ 1+ byte-ptr @ - min
+      256 min
+      dup chunk-length !
       if
-        reinitialize-display
-        error-message-loader-overwrite count $BC40 swap cmove
-        begin again
+        sec-buf1 byte-in-sector @ + copy-buffer chunk-length @ cmove
+        chunk-length @ byte-ptr @ copy-block
+        chunk-length @ byte-ptr @ + byte-ptr !
+        chunk-length @ byte-in-sector @ + byte-in-sector !
+        chunk-length @ 0 byte-in-file 2@ d+ byte-in-file 2!
       then
+      byte-ptr @ block-end @ u>
+    until
 
-      runad @ 0= if
-        byte-ptr @ runad !
-      then
-
-      lit dummy_init initad !
-
-      begin
-        peek-byte
-        512 byte-in-sector @ -
-        block-end @ 1+ byte-ptr @ - min
-        256 min
-        dup chunk-length !
-        if
-          sec-buf1 byte-in-sector @ + copy-buffer chunk-length @ cmove
-          chunk-length @ byte-ptr @ copy-block
-          chunk-length @ byte-ptr @ + byte-ptr !
-          chunk-length @ byte-in-sector @ + byte-in-sector !
-          chunk-length @ 0 byte-in-file 2@ d+ byte-in-file 2!
-        then
-        byte-ptr @ block-end @ u>
-      until
-
-      com-init
-      byte-in-file 2@ selected-file-size 2@ d= if com-run then
-    again
-  then
-
-  ( begin again ) ;
+    com-init
+    byte-in-file 2@ selected-file-size 2@ d= if com-run then
+  again
+  ;
 
 [code]
  ert *>$9FFF
-
- org $A006+4
- sei
- lda #$00
- sta $D40E
- lda #124
- cmp:rne $D40B
- lda #123
- cmp:rne $D40B
- rts
-
-dlist_2
- dta $70,$70,$70
- :24 dta $42,a(empty)
- dta $41,a(dlist_2)
-empty
- :40 dta 0
 
 com_loader_setup_start equ *
  org r:$0900

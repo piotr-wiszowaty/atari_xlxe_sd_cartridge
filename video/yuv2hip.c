@@ -123,18 +123,24 @@ static void odd(FILE *out, const unsigned char *raw, int w, int h, FILE *audio)
 
 int main(int argc, char *argv[])
 {
+	unsigned char misc_buf[8192];
+	unsigned char frame_buf[6 + 160 * 90 * 6 / 4];
 	FILE *video = myfopen("stream.yuv", "rb");
 	FILE *audio = myfopen("audiodump.pcm", "rb");
 	FILE *out = myfopen("film.xex", "wb");
 	int frame = 0;
+
+	slurp(misc_buf, "head.obx");
+	fwrite(misc_buf, 1, 8192, out);
+
 	slurp(bank8000, "hip8000.obx");
 	slurp(banka000, "hipa000.obx");
+
 	while (getc(video) != '\n');
 	for (;;) {
-		unsigned char buf[6 + 160 * 90 * 6 / 4];
-		if (fread(buf, 1, sizeof(buf), video) != sizeof(buf))
+		if (fread(frame_buf, 1, sizeof(frame_buf), video) != sizeof(frame_buf))
 			break;
-		if (memcmp(buf, "FRAME\n", 6) != 0) {
+		if (memcmp(frame_buf, "FRAME\n", 6) != 0) {
 			puts("ERROR");
 			return 1;
 		}
@@ -142,17 +148,20 @@ int main(int argc, char *argv[])
 			printf("Frame %d\n", frame);
 #if 0
 		if (frame == 400) {
-			ascii(buf + 6, 160, 90);
-			hip(buf + 6, 160, 90);
+			ascii(frame_buf + 6, 160, 90);
+			hip(frame_buf + 6, 160, 90);
 			break;
 		}
 #endif
-		even(out, buf + 6, 160, 90, audio);
-		odd(out, buf + 6, 160, 90, audio);
+		even(out, frame_buf + 6, 160, 90, audio);
+		odd(out, frame_buf + 6, 160, 90, audio);
 	}
+
 	fclose(video);
 	fclose(audio);
 	fclose(out);
+
 	printf("smp min=%d max=%d\n", smp_min, smp_max);
+
 	return 0;
 }

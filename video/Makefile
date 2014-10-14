@@ -1,8 +1,8 @@
-SRC_VIDEO = ../../REJS.mp4
+SRC_VIDEO = film.mp4
 
 all: film.xex
 
-film.xex: yuv2hip stream.yuv audiodump.pcm hip8000.obx hipa000.obx
+film.xex: yuv2hip stream.yuv audiodump.pcm hip8000.obx hipa000.obx head.obx
 	./yuv2hip
 
 yuv2hip: yuv2hip.c
@@ -13,6 +13,9 @@ hip8000.obx: hip.asx
 
 hipa000.obx: hip.asx
 	xasm -q -d main=\$$a006 -d mode=\$$80 -o $@ $<
+
+head.obx: head.asx
+	xasm -o $@ $<
 
 stream.yuv: $(SRC_VIDEO)
 	mplayer -benchmark -ao pcm:nowaveheader -af channels=1,resample=15600,format=u8 -vf scale=160:90 -vo yuv4mpeg $<
