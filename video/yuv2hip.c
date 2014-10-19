@@ -157,6 +157,9 @@ int main(int argc, char *argv[])
 		odd(out, frame_buf + 6, 160, 90, audio);
 	}
 
+	slurp(misc_buf, "tail.obx");
+	fwrite(misc_buf, 1, 8192, out);
+
 	fclose(video);
 	fclose(audio);
 	fclose(out);

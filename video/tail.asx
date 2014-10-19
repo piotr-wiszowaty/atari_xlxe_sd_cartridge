@@ -1,0 +1,62 @@
+fsel_backup equ	$4000
+
+command	 equ	$d5e8
+sec_offs equ	$d5e9
+sec_cnt	 equ	$d5ea
+sec_num  equ	$d5eb
+cart_ena equ	$d5ef
+
+	opt	h-f+
+	org	$8000
+
+:10	nop
+
+	; reinitialize display
+	sei:inc	^4e
+	lda:rne	^4b
+	ldx	#29
+	sta:rpl	^00,x-
+	mva	#$ff	^31
+	mva	#$94	^18
+	mva	#$0a	^17
+	mva	#$22	^40
+	mva	#2	^41
+	mva	>$e000	^49
+
+	; wait for $a000..$bfff loading completion
+w8_a000	lda	#$40
+	bit	command
+	beq	w8_a000
+
+	ldx	#reloc_len-1
+	mva:rpl	reloc_src,x	reloc_dest,x-
+
+	jmp	reloc_dest
+
+reloc_src
+	org	r:$2000
+reloc_dest
+
+	; restore file selector
+	ldx	#0
+copy_loop
+copy_src
+	lda	fsel_backup,x
+copy_dest
+	sta	$8000,x
+	inx
+	bne	copy_loop
+	inc	copy_src+2
+	inc	copy_dest+2
+	lda	#$c0
+	cmp	copy_dest+2
+	bne	copy_loop
+
+	mva	#$40	^4e
+	cli
+
+	; jump to file selector
+	jmp	$8006+4
+
+reloc_len equ *-reloc_dest
+	ert	reloc_len>255

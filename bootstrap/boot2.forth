@@ -4,16 +4,32 @@
  opt h-f+
  org $8000
  :10 dta 0
+ ldx #$F8
+ txs
 [end-code]
 
 [text-section] text
 
 23 constant visible-files
 
+$01 constant dbg-total-files
+$02 constant dbg-max-heapify
+
 $022F constant sdmctl
 $0230 constant dladr
 $02E0 constant runad
 $02E2 constant initad
+$0300 constant ddevic
+$0301 constant dunit
+$0302 constant dcmnd
+$0303 constant dstats
+$0304 constant dbufa
+$0306 constant dtimlo
+$0307 constant dunuse
+$0308 constant dbyt
+$030A constant daux1
+$030B constant daux2
+$0600 constant temp
 $0800 constant copy-buffer
 $5000 constant screen
 $A600 constant file-sizes
@@ -63,7 +79,7 @@ $1C constant direntry-file-size
 32  constant direntry-size
 
 variable cursor
-create negative 0 c,
+variable negative
 create msg1 ,' unknown FAT type'
 create error-message-loader-overwrite ,' ERROR: attempted loader overwrite'
 create fs-type 0 c,
@@ -73,11 +89,11 @@ create sectors-per-cluster 0 c,
 2variable fat-start
 2variable first-data-sector
 2variable root-dir-cluster
-create direntry-sector-counter 0 ,
+variable direntry-sector-counter
 variable de-ptr
-create total-files 0 ,
-create de-scan-finished? 0 ,
-create prev-de-attrs 0 ,
+variable total-files
+variable de-scan-finished?
+variable prev-de-attrs
 variable done-sector?
 variable filename
 variable char-count
@@ -99,10 +115,10 @@ variable byte-index
 variable block-end
 variable first-block
 variable chunk-length
-create selected-file-index 0 ,
+variable selected-file-index
 variable new-selected-file-index
-create select-window-top-index 0 ,
-create dlist-select 0 ,
+variable select-window-top-index
+variable dlist-select
 create legend $DC c, $DD c, ' :select file,' ' Return'* ' :load & run        '
 create dlist0
   $70 c, $70 c, $70 c,
@@ -230,6 +246,34 @@ do_gc
  pha
  rts
 [end-code] ;
+
+: debug  ( n -- )
+[code]
+ lda pstack,x
+ inx
+ inx
+ jmp next
+[end-code] ;
+
+: jsioint
+[code]
+ jsr $E459
+ jmp next
+[end-code] ;
+
+\ send data through SIO interface
+\ u1 - data address
+\ u2 - data length
+\ u3 - command
+: sio-command   ( u1 u2 u3 -- )
+  dcmnd c!
+  dup daux1 ! dbyt !
+  dbufa !
+  $31 ddevic c!
+  $01 dunit c!
+  $80 dstats c!
+  $08 dtimlo c!
+  jsioint ;
 
 : ++            ( addr -- )
   [label] plus_plus
@@ -785,14 +829,6 @@ internal2lowercase_done
 : min
   over over u< if drop else nip then ;
 
-: debug  ( n -- )
-[code]
- lda pstack,x
- inx
- inx
- jmp next
-[end-code] ;
-
 : u>= [label] u_gt_eq u< not ;
 
 : u<= [label] u_lt_eq u> not ;
@@ -851,11 +887,14 @@ internal2lowercase_done
   dup @ 2 + swap ! ;
 
 : main
+  0 negative !
+
   \ wait for $A000-$BFFF loading to complete
   w8-cart-read
 
   screen clear-screen
 
+  0 dlist-select !
   switch-dlist
 
   \ read MBR
@@ -910,6 +949,12 @@ internal2lowercase_done
   loop drop
 
   \ scan root directory entries
+  0 total-files !
+  0 de-scan-finished? !
+  0 prev-de-attrs !
+  0 direntry-sector-counter !
+  0 selected-file-index !
+  0 select-window-top-index !
   begin
     de-scan-finished? @ not while
     shift-sec-buf
