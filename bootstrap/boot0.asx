@@ -1,0 +1,34 @@
+command	equ	$d5e8
+sec_offs equ	$d5e9
+sec_cnt	equ	$d5ea
+sec_num	equ	$d5eb
+
+	opt	h-f+
+	org	$bf00
+init
+	clc
+	rts
+main
+	ldx	#reloc_len-1
+	mva:rpl	reloc_src,x	reloc_dest,x-
+	jmp	reloc_dest
+
+reloc_src
+	org	r:$3000
+reloc_dest
+	mva	#$00	sec_offs
+	mva	#32	sec_cnt
+	mva	#$01	command
+
+w8_1st	lda	#$01
+	bit	command
+	bne	w8_1st
+
+	jmp	$8000
+
+reloc_len	equ	*-reloc_dest
+
+	org	$bff8
+	dta	0,0
+	dta	a(main),0,4,a(init)
+	end

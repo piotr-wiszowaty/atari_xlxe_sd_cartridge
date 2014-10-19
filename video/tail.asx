@@ -56,7 +56,7 @@ copy_dest
 	cli
 
 	; jump to file selector
-	jmp	$8006+4
+	jmp	$8000
 
 reloc_len equ *-reloc_dest
 	ert	reloc_len>255

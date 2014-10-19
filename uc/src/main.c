@@ -87,12 +87,12 @@
 #define CMD_MASK_SUCCESS	0x40
 #define CMD_MASK_FAILURE	0x80
 
-#define FETCH_CMD_PARAMS	\
-	sector_offset = ram_read() & 0x1f;	\
-	n_sectors = ram_read() & 0x1f;		\
-	sector = ram_read();				\
-	sector |= (int) ram_read() << 8;	\
-	sector |= (int) ram_read() << 16;	\
+#define FETCH_CMD_PARAMS									\
+	sector_offset = ram_read() & 0x1f;						\
+	if ((n_sectors = ram_read()) > 32) { n_sectors = 32; }	\
+	sector = ram_read();									\
+	sector |= (int) ram_read() << 8;						\
+	sector |= (int) ram_read() << 16;						\
 	sector |= (int) ram_read() << 24
 
 extern void transfer_sector_to_ram();

@@ -22,8 +22,8 @@ RAM region `$8000+512*<OFFSET>..$8000+512*(<OFFSET>+<SECTOR_COUNT>)-1`.
 
 `$D5E9` :
 
-* bit4..bit0 - `<OFFSET>`; data offset from `$8000`; measured in 512-byte blocks
-* bit7..bit5 - unused
+* bit5..bit0 - `<OFFSET>`; data offset from `$8000`; measured in 512-byte blocks
+* bit7..bit4 - unused
 
 `$D5EA` :
 

@@ -3,7 +3,6 @@
 [code]
  opt h-f+
  org $8000
- :10 dta 0
  ldx #$F8
  txs
 [end-code]
@@ -888,9 +887,6 @@ internal2lowercase_done
 
 : main
   0 negative !
-
-  \ wait for $A000-$BFFF loading to complete
-  w8-cart-read
 
   screen clear-screen
 
