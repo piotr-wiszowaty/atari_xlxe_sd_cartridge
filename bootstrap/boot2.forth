@@ -888,6 +888,9 @@ internal2lowercase_done
 : main
   0 negative !
 
+  \ initialize data addresses in display list
+  screen dlist0 4 + 23 0 do 2dup ! 3 + swap 40 + swap loop 2drop
+
   screen clear-screen
 
   0 dlist-select !
