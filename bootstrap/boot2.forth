@@ -3,8 +3,6 @@
 [code]
  opt h-f+
  org $8000
- ldx #$F8
- txs
 [end-code]
 
 [text-section] text
