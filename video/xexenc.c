@@ -7,8 +7,12 @@
 #include <libavformat/avformat.h>
 #include <libavutil/opt.h>
 
-static const char *audio_filters_descr = "aresample=15600,aformat=sample_fmts=s16:channel_layouts=mono,volume=4";
-static const char *video_filters_descr = "scale=160:180,fps=50";
+static enum {
+	HIP,
+	GR8
+} video_mode;
+
+static const char *audio_volume = "4";
 
 static bool open_stream(AVFormatContext *fmt_ctx, const char *name, enum AVMediaType type, int *stream_index, AVCodecContext **dec_ctx)
 {
@@ -55,6 +59,8 @@ static bool parse_graph(AVFilterGraph *filter_graph, AVFilterContext *buffersrc_
 static FILE *xex;
 static uint8_t hip8000[8192];
 static uint8_t hipa000[8192];
+static uint8_t gr88000[8192];
+static uint8_t gr8a000[8192];
 static int audio_pos;
 static int video_pos;
 
@@ -140,29 +146,46 @@ static void video_frame(const AVFrame *frame)
 		printf("%02d:%02d\n", min / 60, min % 60);
 	}
 	fseek(xex, video_pos << 13, SEEK_SET);
-	if ((video_pos & 1) == 0) {
-		fwrite(hip8000, 1, 4096 - 40 * 90, xex);
-		for (int y = 0; y < 90; y++) {
-			gr9_line(p);
-			p += frame->linesize[0];
-			gr10_line(p);
-			p += frame->linesize[0];
+	switch (video_mode) {
+	case HIP:
+		if ((video_pos & 1) == 0) {
+			fwrite(hip8000, 1, 4096 - 40 * 90, xex);
+			for (int y = 0; y < 90; y++) {
+				gr9_line(p);
+				p += frame->linesize[0];
+				gr10_line(p);
+				p += frame->linesize[0];
+			}
+			fwrite(hip8000 + 4096 + 40 * 90, 1, 4096 - 40 * 90 - 312 - 8, xex);
+			fseek(xex, 312, SEEK_CUR);
+			fwrite(hip8000 + 8184, 1, 8, xex);
 		}
-		fwrite(hip8000 + 4096 + 40 * 90, 1, 4096 - 40 * 90 - 312 - 8, xex);
-		fseek(xex, 312, SEEK_CUR);
-		fwrite(hip8000 + 8184, 1, 8, xex);
-	}
-	else {
-		fwrite(hipa000, 1, 4096 - 40 * 90, xex);
-		for (int y = 0; y < 90; y++) {
-			gr10_line(p);
-			p += frame->linesize[0];
-			gr9_line(p);
-			p += frame->linesize[0];
+		else {
+			fwrite(hipa000, 1, 4096 - 40 * 90, xex);
+			for (int y = 0; y < 90; y++) {
+				gr10_line(p);
+				p += frame->linesize[0];
+				gr9_line(p);
+				p += frame->linesize[0];
+			}
+			fwrite(hipa000 + 4096 + 40 * 90, 1, 4096 - 40 * 90 - 312 - 8, xex);
+			fseek(xex, 312, SEEK_CUR);
+			fwrite(hipa000 + 8184, 1, 8, xex);
 		}
-		fwrite(hipa000 + 4096 + 40 * 90, 1, 4096 - 40 * 90 - 312 - 8, xex);
-		fseek(xex, 312, SEEK_CUR);
-		fwrite(hipa000 + 8184, 1, 8, xex);
+		break;
+	case GR8:
+		{
+			const uint8_t *obx = (video_pos & 1) == 0 ? gr88000 : gr8a000;
+			fwrite(obx, 1, 4096 - 40 * 90, xex);
+			for (int y = 0; y < 180; y++) {
+				fwrite(p, 1, 40, xex);
+				p += frame->linesize[0];
+			}
+			fwrite(obx + 4096 + 40 * 90, 1, 4096 - 40 * 90 - 312 - 8, xex);
+			fseek(xex, 312, SEEK_CUR);
+			fwrite(obx + 8184, 1, 8, xex);
+		}
+		break;
 	}
 	video_pos++;
 }
@@ -236,7 +259,10 @@ static bool encode(const char *input_file)
 		av_log(NULL, AV_LOG_ERROR, "Cannot set output sample rate\n");
 		return false;
 	}
-	if (parse_graph(audio_filter_graph, audio_buffersrc_ctx, audio_buffersink_ctx, audio_filters_descr) < 0)
+	snprintf(args, sizeof(args),
+		"aresample=15600,aformat=sample_fmts=s16:channel_layouts=mono,volume=%s",
+		audio_volume);
+	if (parse_graph(audio_filter_graph, audio_buffersrc_ctx, audio_buffersink_ctx, args) < 0)
 		return false;
 
 	/* setup video filter */
@@ -262,12 +288,16 @@ static bool encode(const char *input_file)
 		av_log(NULL, AV_LOG_ERROR, "Cannot create buffer sink\n");
 		return false;
 	}
-	static const enum AVPixelFormat pix_fmts[] = { AV_PIX_FMT_GRAY8, AV_PIX_FMT_NONE };
+	const enum AVPixelFormat pix_fmts[] = { video_mode == GR8 ? AV_PIX_FMT_MONOBLACK : AV_PIX_FMT_GRAY8, AV_PIX_FMT_NONE };
 	if (av_opt_set_int_list(video_buffersink_ctx, "pix_fmts", pix_fmts, AV_PIX_FMT_NONE, AV_OPT_SEARCH_CHILDREN) < 0) {
 		av_log(NULL, AV_LOG_ERROR, "Cannot set output pixel format\n");
 		return false;
 	}
-	if (parse_graph(video_filter_graph, video_buffersrc_ctx, video_buffersink_ctx, video_filters_descr) < 0)
+	const char *video_filters_desc =
+		video_mode == HIP ? "scale=160:180,fps=50" :
+		video_mode == GR8 ? "scale=320:180:sws_dither=ed,fps=50" : // TODO: try sws_dither from https://www.ffmpeg.org/ffmpeg-scaler.html
+		NULL;
+	if (parse_graph(video_filter_graph, video_buffersrc_ctx, video_buffersink_ctx, video_filters_desc) < 0)
 		return false;
 
 	/* encode loop */
@@ -355,10 +385,26 @@ int main(int argc, char **argv)
 		return 1;
 	}
 	if (!slurp(hip8000, "hip8000.obx")
-	 || !slurp(hipa000, "hipa000.obx"))
+	 || !slurp(hipa000, "hipa000.obx")
+	 || !slurp(gr88000, "gr88000.obx")
+	 || !slurp(gr8a000, "gr8a000.obx"))
 		return 1;
-	for (int i = 1; i < argc; i++)
-		if (!encode(argv[i]))
+	for (int i = 1; i < argc; i++) {
+		const char *arg = argv[i];
+		if (arg[0] == '-') {
+			if (strncmp(arg, "--volume=", 9) == 0)
+				audio_volume = arg + 9;
+			if (strcmp(arg, "--video=hip") == 0)
+				video_mode = HIP;
+			else if (strcmp(arg, "--video=gr8") == 0)
+				video_mode = GR8;
+			else {
+				fprintf(stderr, "Unknown option: %s\n", arg);
+				return 1;
+			}
+		}
+		else if (!encode(arg))
 			return 1;
+	}
 	return 0;
 }
