@@ -9,7 +9,8 @@
 
 static enum {
 	HIP,
-	GR8
+	GR8,
+	GR9
 } video_mode;
 
 static const char *audio_volume = "4";
@@ -61,6 +62,8 @@ static uint8_t hip8000[8192];
 static uint8_t hipa000[8192];
 static uint8_t gr88000[8192];
 static uint8_t gr8a000[8192];
+static uint8_t gr98000[8192];
+static uint8_t gr9a000[8192];
 static int audio_pos;
 static int video_pos;
 
@@ -186,6 +189,23 @@ static void video_frame(const AVFrame *frame)
 			fwrite(obx + 8184, 1, 8, xex);
 		}
 		break;
+	case GR9:
+		{
+			const uint8_t *obx = (video_pos & 1) == 0 ? gr98000 : gr9a000;
+			fwrite(obx, 1, 4096 - 40 * 90, xex);
+			for (int y = 0; y < 180; y++) {
+				for (int x = 0; x < 80; x += 2) {
+					int o = p[x] & 0xf0;
+					o |= p[x + 1] >> 4;
+					putc(o, xex);
+				}
+				p += frame->linesize[0];
+			}
+			fwrite(obx + 4096 + 40 * 90, 1, 4096 - 40 * 90 - 312 - 8, xex);
+			fseek(xex, 312, SEEK_CUR);
+			fwrite(obx + 8184, 1, 8, xex);
+		}
+		break;
 	}
 	video_pos++;
 }
@@ -296,6 +316,7 @@ static bool encode(const char *input_file)
 	const char *video_filters_desc =
 		video_mode == HIP ? "scale=160:180,fps=50" :
 		video_mode == GR8 ? "scale=320:180:sws_dither=ed,fps=50" : // TODO: try sws_dither from https://www.ffmpeg.org/ffmpeg-scaler.html
+		video_mode == GR9 ? "scale=80:180,fps=50" :
 		NULL;
 	if (parse_graph(video_filter_graph, video_buffersrc_ctx, video_buffersink_ctx, video_filters_desc) < 0)
 		return false;
@@ -387,7 +408,9 @@ int main(int argc, char **argv)
 	if (!slurp(hip8000, "hip8000.obx")
 	 || !slurp(hipa000, "hipa000.obx")
 	 || !slurp(gr88000, "gr88000.obx")
-	 || !slurp(gr8a000, "gr8a000.obx"))
+	 || !slurp(gr8a000, "gr8a000.obx")
+	 || !slurp(gr98000, "gr98000.obx")
+	 || !slurp(gr9a000, "gr9a000.obx"))
 		return 1;
 	for (int i = 1; i < argc; i++) {
 		const char *arg = argv[i];
@@ -398,6 +421,8 @@ int main(int argc, char **argv)
 				video_mode = HIP;
 			else if (strcmp(arg, "--video=gr8") == 0)
 				video_mode = GR8;
+			else if (strcmp(arg, "--video=gr9") == 0)
+				video_mode = GR9;
 			else {
 				fprintf(stderr, "Unknown option: %s\n", arg);
 				return 1;
