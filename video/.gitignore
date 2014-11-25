@@ -1,6 +1,4 @@
 *.obx
 *.xex
 *.exe
-*.yuv
-*.pcm
-yuv2hip
+xexenc
