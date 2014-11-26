@@ -8,6 +8,17 @@
 #include <libavformat/avformat.h>
 #include <libavutil/opt.h>
 
+#define STRINGIFY0(x) #x
+#define STRINGIFY(x) STRINGIFY0(x)
+
+#if NTSC
+#define FPS 60
+#define SCANLINES 262
+#else
+#define FPS 50
+#define SCANLINES 312
+#endif
+
 static enum {
 	HIP,
 	GR8,
@@ -122,7 +133,7 @@ static void audio_frame(const AVFrame *frame)
 	const uint16_t *p = (uint16_t *) frame->data[0];
 	int current_pos = -1;
 	for (int i = 0; i < n; i++) {
-		int desired_pos = (audio_pos / 312 << 13) + 0x1ec0 + audio_pos % 312;
+		int desired_pos = (audio_pos / SCANLINES << 13) + 0x1ff8 - SCANLINES + audio_pos % SCANLINES;
 		if (desired_pos != current_pos)
 			fseek(xex, desired_pos, SEEK_SET);
 		putc(audio_sample(p[i]), xex);
@@ -152,8 +163,8 @@ static void gr10_line(const uint8_t *p)
 static void video_frame(const AVFrame *frame)
 {
 	const uint8_t *p = frame->data[0];
-	if (video_pos % (60 * 50) == 0) {
-		int min = video_pos / (60 * 50);
+	if (video_pos % (60 * FPS) == 0) {
+		int min = video_pos / (60 * FPS);
 		printf("%02d:%02d\n", min / 60, min % 60);
 	}
 	fseek(xex, video_pos << 13, SEEK_SET);
@@ -167,8 +178,8 @@ static void video_frame(const AVFrame *frame)
 				gr10_line(p);
 				p += frame->linesize[0];
 			}
-			fwrite(hip8000 + 4096 + 40 * 90, 1, 4096 - 40 * 90 - 312 - 8, xex);
-			fseek(xex, 312, SEEK_CUR);
+			fwrite(hip8000 + 4096 + 40 * 90, 1, 4096 - 40 * 90 - SCANLINES - 8, xex);
+			fseek(xex, SCANLINES, SEEK_CUR);
 			fwrite(hip8000 + 8184, 1, 8, xex);
 		}
 		else {
@@ -179,8 +190,8 @@ static void video_frame(const AVFrame *frame)
 				gr9_line(p);
 				p += frame->linesize[0];
 			}
-			fwrite(hipa000 + 4096 + 40 * 90, 1, 4096 - 40 * 90 - 312 - 8, xex);
-			fseek(xex, 312, SEEK_CUR);
+			fwrite(hipa000 + 4096 + 40 * 90, 1, 4096 - 40 * 90 - SCANLINES - 8, xex);
+			fseek(xex, SCANLINES, SEEK_CUR);
 			fwrite(hipa000 + 8184, 1, 8, xex);
 		}
 		break;
@@ -192,8 +203,8 @@ static void video_frame(const AVFrame *frame)
 				fwrite(p, 1, 40, xex);
 				p += frame->linesize[0];
 			}
-			fwrite(obx + 4096 + 40 * 90, 1, 4096 - 40 * 90 - 312 - 8, xex);
-			fseek(xex, 312, SEEK_CUR);
+			fwrite(obx + 4096 + 40 * 90, 1, 4096 - 40 * 90 - SCANLINES - 8, xex);
+			fseek(xex, SCANLINES, SEEK_CUR);
 			fwrite(obx + 8184, 1, 8, xex);
 		}
 		break;
@@ -209,8 +220,8 @@ static void video_frame(const AVFrame *frame)
 				}
 				p += frame->linesize[0];
 			}
-			fwrite(obx + 4096 + 40 * 90, 1, 4096 - 40 * 90 - 312 - 8, xex);
-			fseek(xex, 312, SEEK_CUR);
+			fwrite(obx + 4096 + 40 * 90, 1, 4096 - 40 * 90 - SCANLINES - 8, xex);
+			fseek(xex, SCANLINES, SEEK_CUR);
 			fwrite(obx + 8184, 1, 8, xex);
 		}
 		break;
@@ -220,7 +231,7 @@ static void video_frame(const AVFrame *frame)
 
 static void close_xex(void)
 {
-	int len = audio_pos / 312;
+	int len = audio_pos / SCANLINES;
 	// truncate to full audio+video frames
 	if (len > video_pos)
 		len = video_pos;
@@ -298,14 +309,14 @@ static bool encode(const char *input_file)
 		av_log(NULL, AV_LOG_ERROR, "Cannot set output channel layout\n");
 		return false;
 	}
-    static const int out_sample_rates[] = { 15600, -1 };
+    static const int out_sample_rates[] = { FPS * SCANLINES, -1 };
 	if (av_opt_set_int_list(audio_buffersink_ctx, "sample_rates", out_sample_rates, -1, AV_OPT_SEARCH_CHILDREN) < 0) {
 		av_log(NULL, AV_LOG_ERROR, "Cannot set output sample rate\n");
 		return false;
 	}
 	snprintf(args, sizeof(args),
-		"aresample=15600,aformat=sample_fmts=s16:channel_layouts=mono,volume=%s",
-		audio_volume);
+		"aresample=%d,aformat=sample_fmts=s16:channel_layouts=mono,volume=%s",
+		FPS * SCANLINES, audio_volume);
 	if (parse_graph(audio_filter_graph, audio_buffersrc_ctx, audio_buffersink_ctx, args) < 0)
 		return false;
 
@@ -338,9 +349,9 @@ static bool encode(const char *input_file)
 		return false;
 	}
 	const char *video_filters_desc =
-		video_mode == HIP ? "scale=160:180,fps=50" :
-		video_mode == GR8 ? "scale=320:180:sws_dither=ed,fps=50" : // TODO: try sws_dither from https://www.ffmpeg.org/ffmpeg-scaler.html
-		video_mode == GR9 ? "scale=80:180,fps=50" :
+		video_mode == HIP ? "scale=160:180,fps=" STRINGIFY(FPS):
+		video_mode == GR8 ? "scale=320:180:sws_dither=ed,fps=" STRINGIFY(FPS) : // TODO: try sws_dither from https://www.ffmpeg.org/ffmpeg-scaler.html
+		video_mode == GR9 ? "scale=80:180,fps=" STRINGIFY(FPS) :
 		NULL;
 	if (parse_graph(video_filter_graph, video_buffersrc_ctx, video_buffersink_ctx, video_filters_desc) < 0)
 		return false;

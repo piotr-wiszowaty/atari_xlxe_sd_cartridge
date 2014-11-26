@@ -1,7 +1,13 @@
+	ift	NTSC
+scanlines	equ	262
+	els
+scanlines	equ	312
+	eif
 lines	equ	90
-half equ main+$ffa
+half	equ	main+$ffa
 scr	equ	half-lines*40
-smp	equ	half+$ec0 ; 64+248
+smp_end		equ	main+$1ff2
+smp	equ	smp_end-scanlines
 
 	org	main
 
@@ -11,7 +17,7 @@ smp	equ	half+$ec0 ; 64+248
 	cmp:rne	^4b
 	mvx	smp	^4a
 	stx	^21
-	mva	#$22	^40 ;6
+	mva	#$22	^40	;6
 	mwa	#dl	^42	;12
 	mvy	#1	^12	;6
 	sty	^1a	;4
@@ -25,14 +31,14 @@ smp	equ	half+$ec0 ; 64+248
 blank
 	mvx	smp,y+	^4a
 	stx	^21
-	cpy	#64
+	cpy	#scanlines-248
 	bcc	blank
 
 	ldy	#256-248
 	lda	#mode
 line
 	eor	#$40^$80
-	mvx	smp+312-256,y+	^4a
+	mvx	smp_end-256,y+	^4a
 	stx	^21
 	sta	^1b
 	bne	line
