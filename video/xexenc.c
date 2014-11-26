@@ -14,6 +14,7 @@ static enum {
 	GR9
 } video_mode = HIP;
 
+static const char *output_file = NULL;
 static const char *audio_volume = "4";
 
 static FILE *xex;
@@ -84,13 +85,16 @@ static bool slurp(unsigned char *buf, const char *filename)
 
 static bool create_xex(const char *input_file)
 {
-	char output_file[FILENAME_MAX];
-	int dot_pos = 0;
-	int i;
-	for (i = 0; input_file[i] != '\0' && i < FILENAME_MAX - 5; i++)
-		if ((output_file[i] = input_file[i]) == '.')
-			dot_pos = i;
-	strcpy(output_file + (dot_pos == 0 ? i : dot_pos), ".xex");
+	char output_default[FILENAME_MAX];
+	if (output_file == NULL) {
+		int dot_pos = 0;
+		int i;
+		for (i = 0; input_file[i] != '\0' && i < FILENAME_MAX - 5; i++)
+			if ((output_default[i] = input_file[i]) == '.')
+				dot_pos = i;
+		strcpy(output_default + (dot_pos == 0 ? i : dot_pos), ".xex");
+		output_file = output_default;
+	}
 	xex = fopen(output_file, "wb");
 	if (xex == NULL) {
 		perror(output_file);
@@ -214,7 +218,7 @@ static void video_frame(const AVFrame *frame)
 	video_pos++;
 }
 
-static void close_xex()
+static void close_xex(void)
 {
 	int len = audio_pos / 312;
 	// truncate to full audio+video frames
@@ -227,6 +231,7 @@ static void close_xex()
 	ftruncate(fileno(xex), len);
 	fwrite(tail, 1, 8192, xex);
 	fclose(xex);
+	output_file = NULL;
 }
 
 static bool encode(const char *input_file)
@@ -418,10 +423,24 @@ static bool encode(const char *input_file)
 	return true;
 }
 
+static void usage(void)
+{
+	printf(
+		"Usage: xexenc [OPTIONS] INPUTFILE...\n"
+		"Options:\n"
+		"--output=FILE    Set output filename (default: INPUTFILE with .xex extension)\n"
+		"--volume=DECIMAL Set audio volume (default: 4.0)\n"
+		"--video=hip      Set HIP (160x180, 16 levels of gray) graphics mode (default)\n"
+		"--video=gr8      Set GR8 (320x180, mono) graphics mode\n"
+		"--video=gr9      Set GR9 (80x180, 16 levels of gray) graphics mode\n"
+		"--help           Display this information\n"
+	);
+}
+
 int main(int argc, char **argv)
 {
 	if (argc < 2) {
-		fprintf(stderr, "Usage: xexenc INPUTFILE...\n");
+		usage();
 		return 1;
 	}
 	if (!slurp(head, "head.obx")
@@ -436,14 +455,18 @@ int main(int argc, char **argv)
 	for (int i = 1; i < argc; i++) {
 		const char *arg = argv[i];
 		if (arg[0] == '-') {
-			if (strncmp(arg, "--volume=", 9) == 0)
+			if (strncmp(arg, "--output=", 9) == 0)
+				output_file = arg + 9;
+			else if (strncmp(arg, "--volume=", 9) == 0)
 				audio_volume = arg + 9;
-			if (strcmp(arg, "--video=hip") == 0)
+			else if (strcmp(arg, "--video=hip") == 0)
 				video_mode = HIP;
 			else if (strcmp(arg, "--video=gr8") == 0)
 				video_mode = GR8;
 			else if (strcmp(arg, "--video=gr9") == 0)
 				video_mode = GR9;
+			else if (strcmp(arg, "--help") == 0)
+				usage();
 			else {
 				fprintf(stderr, "Unknown option: %s\n", arg);
 				return 1;

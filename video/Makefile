@@ -1,7 +1,10 @@
 SRC_VIDEO = ../../fr-08.avi
+DEST_VIDEO = film.xex
 
-all: xexenc gr88000.obx gr8a000.obx gr98000.obx gr9a000.obx hip8000.obx hipa000.obx head.obx tail.obx $(SRC_VIDEO)
-	./xexenc --video=gr9 $(SRC_VIDEO)
+all: $(DEST_VIDEO)
+
+$(DEST_VIDEO): xexenc gr88000.obx gr8a000.obx gr98000.obx gr9a000.obx hip8000.obx hipa000.obx head.obx tail.obx $(SRC_VIDEO)
+	./xexenc --output=$@ $(SRC_VIDEO)
 
 xexenc: xexenc.c
 	gcc -o $@ -s -O2 -Wall --std=gnu99 $< -l avcodec -l avfilter -l avformat -l avutil
@@ -31,7 +34,7 @@ tail.obx: tail.asx
 	xasm -q -o $@ $<
 
 clean:
-	$(RM) film.xex xexenc gr88000.obx gr8a000.obx gr98000.obx gr9a000.obx hip8000.obx hipa000.obx head.obx tail.obx
+	$(RM) $(DEST_VIDEO) xexenc gr88000.obx gr8a000.obx gr98000.obx gr9a000.obx hip8000.obx hipa000.obx head.obx tail.obx
 
 .PHONY: all clean
 
