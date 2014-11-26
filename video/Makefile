@@ -4,7 +4,7 @@ all: xexenc gr88000.obx gr8a000.obx gr98000.obx gr9a000.obx hip8000.obx hipa000.
 	./xexenc --video=gr9 $(SRC_VIDEO)
 
 xexenc: xexenc.c
-	gcc -o $@ -s -O2 -Wall --std=c99 $< -l avcodec -l avfilter -l avformat -l avutil
+	gcc -o $@ -s -O2 -Wall --std=gnu99 $< -l avcodec -l avfilter -l avformat -l avutil
 
 gr88000.obx: gr8.asx
 	xasm -q -d main=\$$8006 -o $@ $<

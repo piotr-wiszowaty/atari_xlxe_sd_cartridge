@@ -1,5 +1,6 @@
 #include <stdbool.h>
 #include <stdio.h>
+#include <unistd.h>
 
 #include <libavfilter/avfiltergraph.h>
 #include <libavfilter/buffersink.h>
@@ -11,9 +12,21 @@ static enum {
 	HIP,
 	GR8,
 	GR9
-} video_mode;
+} video_mode = HIP;
 
 static const char *audio_volume = "4";
+
+static FILE *xex;
+static uint8_t head[8192];
+static uint8_t tail[8192];
+static uint8_t hip8000[8192];
+static uint8_t hipa000[8192];
+static uint8_t gr88000[8192];
+static uint8_t gr8a000[8192];
+static uint8_t gr98000[8192];
+static uint8_t gr9a000[8192];
+static int audio_pos;
+static int video_pos;
 
 static bool open_stream(AVFormatContext *fmt_ctx, const char *name, enum AVMediaType type, int *stream_index, AVCodecContext **dec_ctx)
 {
@@ -57,16 +70,6 @@ static bool parse_graph(AVFilterGraph *filter_graph, AVFilterContext *buffersrc_
 	return true;
 }
 
-static FILE *xex;
-static uint8_t hip8000[8192];
-static uint8_t hipa000[8192];
-static uint8_t gr88000[8192];
-static uint8_t gr8a000[8192];
-static uint8_t gr98000[8192];
-static uint8_t gr9a000[8192];
-static int audio_pos;
-static int video_pos;
-
 static bool slurp(unsigned char *buf, const char *filename)
 {
 	FILE *fp = fopen(filename, "rb");
@@ -93,6 +96,7 @@ static bool create_xex(const char *input_file)
 		perror(output_file);
 		return false;
 	}
+	fwrite(head, 1, 8192, xex);
 	audio_pos = 0;
 	video_pos = 0;
 	return true;
@@ -208,6 +212,21 @@ static void video_frame(const AVFrame *frame)
 		break;
 	}
 	video_pos++;
+}
+
+static void close_xex()
+{
+	int len = audio_pos / 312;
+	// truncate to full audio+video frames
+	if (len > video_pos)
+		len = video_pos;
+	len &= ~1; // truncate to even number of frames
+	len <<= 13;
+	fseek(xex, len, SEEK_SET);
+	fflush(xex);
+	ftruncate(fileno(xex), len);
+	fwrite(tail, 1, 8192, xex);
+	fclose(xex);
 }
 
 static bool encode(const char *input_file)
@@ -388,7 +407,7 @@ static bool encode(const char *input_file)
 		}
 		av_free_packet(&packet);
 	}
-	fclose(xex);
+	close_xex();
 
 	avfilter_graph_free(&video_filter_graph);
 	avfilter_graph_free(&audio_filter_graph);
@@ -405,7 +424,9 @@ int main(int argc, char **argv)
 		fprintf(stderr, "Usage: xexenc INPUTFILE...\n");
 		return 1;
 	}
-	if (!slurp(hip8000, "hip8000.obx")
+	if (!slurp(head, "head.obx")
+	 || !slurp(tail, "tail.obx")
+	 || !slurp(hip8000, "hip8000.obx")
 	 || !slurp(hipa000, "hipa000.obx")
 	 || !slurp(gr88000, "gr88000.obx")
 	 || !slurp(gr8a000, "gr8a000.obx")
