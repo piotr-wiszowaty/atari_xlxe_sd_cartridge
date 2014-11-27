@@ -1,6 +1,7 @@
 NTSC = 0
 SRC_VIDEO = ../../fr-025.avi
 DEST_VIDEO = film.xex
+INC = -I/usr/include/ffmpeg
 OBX = gr88000.obx gr8a000.obx gr98000.obx gr9a000.obx hip8000.obx hipa000.obx tip8000.obx tipa000.obx head.obx tail.obx
 
 all: $(DEST_VIDEO)
@@ -9,7 +10,7 @@ $(DEST_VIDEO): xexenc altirrapal.pal $(OBX) $(SRC_VIDEO)
 	./xexenc --output=$@ $(SRC_VIDEO)
 
 xexenc: xexenc.c
-	gcc -o $@ -s -O2 -Wall --std=gnu99 -D NTSC=$(NTSC) $< -l avcodec -l avfilter -l avformat -l avutil
+	gcc -o $@ -s -O2 -Wall --std=gnu99 -D NTSC=$(NTSC) $(INC) $< -l avcodec -l avfilter -l avformat -l avutil
 
 gr88000.obx: gr8.asx
 	xasm -q -d NTSC=$(NTSC) -d main=\$$8006 -o $@ $<
