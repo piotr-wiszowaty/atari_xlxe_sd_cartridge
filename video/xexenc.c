@@ -11,10 +11,9 @@
 #define STRINGIFY0(x) #x
 #define STRINGIFY(x) STRINGIFY0(x)
 
-#define U_BITS 6 // 3 (fast) to 8 (high quality)
-#define Y_BITS 6 // 4 (fast) to 8 (high quality)
-#define SATURATION 1500
-#define Y_WEIGHT 16
+#define U_BITS 6 // 3 (fast) to 8 (highest quality)
+#define Y_BITS 6 // 4 (fast) to 8 (highest quality)
+#define Y_WEIGHT 1
 
 #if NTSC
 #define FPS 60
@@ -176,16 +175,20 @@ static void gr10_line(const uint8_t *p)
 static void tip_init(void)
 {
 	uint8_t yuvpal[256 * 3];
-	for (int i = 0; i < 256; i++) {
-		uint8_t r = ataripal[i * 3];
-		uint8_t g = ataripal[i * 3 + 1];
-		uint8_t b = ataripal[i * 3 + 2];
-		int y = (299 * r + 587 * g + 114 * b) / 1000;
-		int u = 128 + (b - y) * 492 / SATURATION; // 492, 856
-		int v = 128 + (r - y) * 877 / SATURATION; // 877, 1522
-		yuvpal[i * 3] = y;
-		yuvpal[i * 3 + 1] = u;
-		yuvpal[i * 3 + 2] = v;
+	for (int c = 0; c < 256; c++) {
+		uint8_t r = ataripal[c * 3];
+		uint8_t g = ataripal[c * 3 + 1];
+		uint8_t b = ataripal[c * 3 + 2];
+		int y =       ( 299 * r + 587 * g + 114 * b) / 1000;
+		int u = 128 + (-169 * r - 331 * g + 500 * b) / 1000;
+		int v = 128 + ( 500 * b - 419 * g -  81 * b) / 1000;
+		if (y < 0 || y > 255 || u < 0 || y > 255 || v < 0 || v > 255) {
+			av_log(NULL, AV_LOG_ERROR, "Color out of range: color=%02x y=%d u=%d v=%d\n", c, y, u, v);
+			exit(1);
+		}
+		yuvpal[c * 3] = y;
+		yuvpal[c * 3 + 1] = u;
+		yuvpal[c * 3 + 2] = v;
 	}
 
 	for (int i = 0; i < sizeof(uvy2atari); i++) {
@@ -211,9 +214,10 @@ static void tip_init(void)
 static void tip_line(const uint8_t *p, int gr10)
 {
 	uint8_t shades[40];
+	gr10 <<= 1;
 	for (int x = 0; x < 320; x += 8) {
-		int atari_left = uvy2atari[(((p[x + 1] >> (8 - U_BITS) << U_BITS) + (p[x + 3] >> (8 - U_BITS))) << Y_BITS) + (p[x + (gr10 << 1)] >> (8 - Y_BITS))];
-		int atari_right = uvy2atari[(((p[x + 5] >> (8 - U_BITS) << U_BITS) + (p[x + 7] >> (8 - U_BITS))) << Y_BITS) + (p[x + (gr10 << 1) + 4] >> (8 - Y_BITS))];
+		int atari_left = uvy2atari[(((p[x + 1] >> (8 - U_BITS) << U_BITS) + (p[x + 3] >> (8 - U_BITS))) << Y_BITS) + (p[x + gr10] >> (8 - Y_BITS))];
+		int atari_right = uvy2atari[(((p[x + 5] >> (8 - U_BITS) << U_BITS) + (p[x + 7] >> (8 - U_BITS))) << Y_BITS) + (p[x + gr10 + 4] >> (8 - Y_BITS))];
 		putc((atari_left & 0xf0) | atari_right >> 4, xex);
 		int o = atari_left << 4 | (atari_right & 0xf);
 		shades[x >> 3] = gr10 == 0 ? o : o >> 1 & 0x77;
