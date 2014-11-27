@@ -1,10 +1,11 @@
 NTSC = 0
-SRC_VIDEO = ../../fr-08.avi
+SRC_VIDEO = ../../fr-025.avi
 DEST_VIDEO = film.xex
+OBX = gr88000.obx gr8a000.obx gr98000.obx gr9a000.obx hip8000.obx hipa000.obx tip8000.obx tipa000.obx head.obx tail.obx
 
 all: $(DEST_VIDEO)
 
-$(DEST_VIDEO): xexenc gr88000.obx gr8a000.obx gr98000.obx gr9a000.obx hip8000.obx hipa000.obx head.obx tail.obx $(SRC_VIDEO)
+$(DEST_VIDEO): xexenc altirrapal.pal $(OBX) $(SRC_VIDEO)
 	./xexenc --output=$@ $(SRC_VIDEO)
 
 xexenc: xexenc.c
@@ -28,6 +29,12 @@ hip8000.obx: hip.asx
 hipa000.obx: hip.asx
 	xasm -q -d NTSC=$(NTSC) -d main=\$$a006 -d mode=\$$80 -o $@ $<
 
+tip8000.obx: tip.asx
+	xasm -q -d NTSC=$(NTSC) -d main=\$$8006 -d mode=\$$40 -o $@ $<
+
+tipa000.obx: tip.asx
+	xasm -q -d NTSC=$(NTSC) -d main=\$$a006 -d mode=\$$80 -o $@ $<
+
 head.obx: head.asx
 	xasm -q -o $@ $<
 
@@ -35,7 +42,7 @@ tail.obx: tail.asx
 	xasm -q -o $@ $<
 
 clean:
-	$(RM) $(DEST_VIDEO) xexenc gr88000.obx gr8a000.obx gr98000.obx gr9a000.obx hip8000.obx hipa000.obx head.obx tail.obx
+	$(RM) $(DEST_VIDEO) xexenc $(OBX)
 
 .PHONY: all clean
 
