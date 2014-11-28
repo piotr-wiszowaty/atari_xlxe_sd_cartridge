@@ -6,7 +6,7 @@ OBX = gr88000.obx gr8a000.obx gr98000.obx gr9a000.obx hip8000.obx hipa000.obx ti
 
 all: $(DEST_VIDEO)
 
-$(DEST_VIDEO): xexenc altirrapal.pal $(OBX) $(SRC_VIDEO)
+$(DEST_VIDEO): xexenc altirrapal.pal altirrantsc.pal $(OBX) $(SRC_VIDEO)
 	./xexenc --output=$@ $(SRC_VIDEO)
 
 xexenc: xexenc.c

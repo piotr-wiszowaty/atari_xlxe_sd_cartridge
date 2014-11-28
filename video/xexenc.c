@@ -18,9 +18,11 @@
 #if NTSC
 #define FPS 60
 #define SCANLINES 262
+#define PALETTE_FILE "altirrantsc.pal"
 #else
 #define FPS 50
 #define SCANLINES 312
+#define PALETTE_FILE "altirrapal.pal"
 #endif
 
 #define HEAD_LEN 0 // TODO: 8192
@@ -525,7 +527,7 @@ int main(int argc, char **argv)
 		usage();
 		return 1;
 	}
-	if (!slurp(ataripal, sizeof(ataripal), "altirrapal.pal")
+	if (!slurp(ataripal, sizeof(ataripal), PALETTE_FILE)
 	 || !slurp(head, sizeof(head), "head.obx")
 	 || !slurp(tail, sizeof(tail), "tail.obx")
 	 || !slurp(tip8000, sizeof(tip8000), "tip8000.obx")
