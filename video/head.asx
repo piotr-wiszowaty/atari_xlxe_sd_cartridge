@@ -12,9 +12,14 @@ cart_ena equ	$d5ef
 main
 	; turn on cartridge memory
 	sei
-	mva	#$c0	cart_ena
+	mva	#$c1	cart_ena
 	nop
 	mva	$d013	$3fa
+	lda	cart_ena
+	cmp	#$ff
+	bne	hardware
+	rts			; emulator detected
+hardware
 	cli
 
 	; save file selector
@@ -92,5 +97,8 @@ play
 error
 	mva	^4b	^1a
 	jmp	error
-
+end
 	ini	main
+
+	org	$8000
+:8192-[end-main]-6-6-4 dta $ff

@@ -25,7 +25,7 @@
 #define PALETTE_FILE "altirrapal.pal"
 #endif
 
-#define HEAD_LEN 0 // TODO: 8192
+#define HEAD_LEN 8192
 
 static enum {
 	TIP,
