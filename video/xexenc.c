@@ -11,9 +11,15 @@
 #define STRINGIFY0(x) #x
 #define STRINGIFY(x) STRINGIFY0(x)
 
+#define TIP_RGB 1
+
+#if TIP_RGB
+#define RGB_BITS 6 // 4 (fast) to 8 (highest quality)
+#else
 #define U_BITS 6 // 3 (fast) to 8 (highest quality)
 #define Y_BITS 6 // 4 (fast) to 8 (highest quality)
 #define Y_WEIGHT 1
+#endif
 
 #if NTSC
 #define FPS 60
@@ -51,7 +57,11 @@ static uint8_t gr98000[8192];
 static uint8_t gr9a000[8192];
 static int audio_pos;
 static int video_pos;
+#if TIP_RGB
+static uint8_t rgb2atari[1 << (RGB_BITS * 3)];
+#else
 static uint8_t uvy2atari[1 << (U_BITS * 2 + Y_BITS)];
+#endif
 
 static bool open_stream(AVFormatContext *fmt_ctx, const char *name, enum AVMediaType type, int *stream_index, AVCodecContext **dec_ctx)
 {
@@ -176,6 +186,26 @@ static void gr10_line(const uint8_t *p)
 
 static void tip_init(void)
 {
+#if TIP_RGB
+	for (int i = 0; i < sizeof(rgb2atari); i++) {
+		uint8_t r = i >> (2 * RGB_BITS) << (8 - RGB_BITS);
+		uint8_t g = i >> RGB_BITS << (8 - RGB_BITS);
+		uint8_t b = i << (8 - RGB_BITS);
+		int best_dist = 1 << 30;
+		int best_c = 0;
+		for (int c = 0; c < 256; c++) {
+			int dr = r - ataripal[c * 3];
+			int dg = g - ataripal[c * 3 + 1];
+			int db = b - ataripal[c * 3 + 2];
+			int dist = dr * dr + dg * dg + db * db;
+			if (dist < best_dist) {
+				best_dist = dist;
+				best_c = c;
+			}
+		}
+		rgb2atari[i] = (uint8_t) best_c;
+	}
+#else
 	uint8_t yuvpal[256 * 3];
 	for (int c = 0; c < 256; c++) {
 		uint8_t r = ataripal[c * 3];
@@ -211,11 +241,21 @@ static void tip_init(void)
 		}
 		uvy2atari[i] = (uint8_t) best_c;
 	}
+#endif
 }
 
 static void tip_line(const uint8_t *p, int gr10)
 {
 	uint8_t shades[40];
+#if TIP_RGB
+	for (int x = gr10 * 3; x < 480; x += 12) {
+		int atari_left = rgb2atari[(((p[x] >> (8 - RGB_BITS) << RGB_BITS) + (p[x + 1] >> (8 - RGB_BITS))) << RGB_BITS) + (p[x + 2] >> (8 - RGB_BITS))];
+		int atari_right = rgb2atari[(((p[x + 6] >> (8 - RGB_BITS) << RGB_BITS) + (p[x + 7] >> (8 - RGB_BITS))) << RGB_BITS) + (p[x + 8] >> (8 - RGB_BITS))];
+		putc((atari_left & 0xf0) | atari_right >> 4, xex);
+		int o = atari_left << 4 | (atari_right & 0xf);
+		shades[x / 12] = gr10 == 0 ? o : o >> 1 & 0x77;
+	}
+#else
 	gr10 <<= 1;
 	for (int x = 0; x < 320; x += 8) {
 		int atari_left = uvy2atari[(((p[x + 1] >> (8 - U_BITS) << U_BITS) + (p[x + 3] >> (8 - U_BITS))) << Y_BITS) + (p[x + gr10] >> (8 - Y_BITS))];
@@ -224,6 +264,7 @@ static void tip_line(const uint8_t *p, int gr10)
 		int o = atari_left << 4 | (atari_right & 0xf);
 		shades[x >> 3] = gr10 == 0 ? o : o >> 1 & 0x77;
 	}
+#endif
 	fwrite(shades, 1, 40, xex);
 }
 
@@ -412,10 +453,26 @@ static bool encode(const char *input_file)
 		enum AVPixelFormat pix_fmts[2] = { AV_PIX_FMT_NONE, AV_PIX_FMT_NONE };
 		const char *video_filters_desc;
 		switch (video_mode) {
-		case TIP: pix_fmts[0] = AV_PIX_FMT_YUYV422;   video_filters_desc = "scale=160:90,fps=" STRINGIFY(FPS);  break;
-		case HIP: pix_fmts[0] = AV_PIX_FMT_GRAY8;     video_filters_desc = "scale=160:180,fps=" STRINGIFY(FPS); break;
-		case GR8: pix_fmts[0] = AV_PIX_FMT_MONOBLACK; video_filters_desc = "scale=320:180:sws_dither=ed,fps=" STRINGIFY(FPS); break; // TODO: try sws_dither from https://www.ffmpeg.org/ffmpeg-scaler.html
-		case GR9: pix_fmts[0] = AV_PIX_FMT_GRAY8;     video_filters_desc = "scale=80:180,fps=" STRINGIFY(FPS); break;
+		case TIP:
+#if TIP_RGB
+			pix_fmts[0] = AV_PIX_FMT_RGB24;
+#else
+			pix_fmts[0] = AV_PIX_FMT_YUYV422;
+#endif
+			video_filters_desc = "scale=160:90,fps=" STRINGIFY(FPS);
+			break;
+		case HIP:
+			pix_fmts[0] = AV_PIX_FMT_GRAY8;
+			video_filters_desc = "scale=160:180,fps=" STRINGIFY(FPS);
+			break;
+		case GR8:
+			pix_fmts[0] = AV_PIX_FMT_MONOBLACK;
+			video_filters_desc = "scale=320:180:sws_dither=ed,fps=" STRINGIFY(FPS); // TODO: try sws_dither from https://www.ffmpeg.org/ffmpeg-scaler.html
+			break;
+		case GR9:
+			pix_fmts[0] = AV_PIX_FMT_GRAY8;
+			video_filters_desc = "scale=80:180,fps=" STRINGIFY(FPS);
+			break;
 		default:
 			fprintf(stderr, "Unknown video mode %d\n", video_mode);
 			return false;
