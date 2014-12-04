@@ -11,22 +11,18 @@ cart_ena equ	$d5ef
 
 :10	nop
 
-	; reinitialize display
-	sei:inc	^4e
-	lda:rne	^4b
-	ldx	#29
-	sta:rpl	^00,x-
-	mva	#$ff	^31
-	mva	#$94	^18
-	mva	#$0a	^17
-	mva	#$22	^40
-	mva	#2	^41
-	mva	>$e000	^49
+	lda	cart_ena
+	cmp	#$ff
+	bne	hardware
 
+; emulator: stop on black screen
+	inc	^40
+	jmp	*
+
+hardware
 	; wait for $a000..$bfff loading completion
-w8_a000	lda	#$40
-	bit	command
-	beq	w8_a000
+	lda	#$40
+	bit:req	command
 
 	ldx	#reloc_len-1
 	mva:rpl	reloc_src,x	reloc_dest,x-
@@ -59,4 +55,4 @@ copy_dest
 	jmp	$8000
 
 reloc_len equ *-reloc_dest
-	ert	reloc_len>255
+	ert	reloc_len>128

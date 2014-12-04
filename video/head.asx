@@ -15,12 +15,12 @@ main
 	mva	#$c1	cart_ena
 	nop
 	mva	$d013	$3fa
+	cli
 	lda	cart_ena
 	cmp	#$ff
 	bne	hardware
 	rts			; emulator detected
 hardware
-	cli
 
 	; save file selector
 	ldx	#0
@@ -51,9 +51,8 @@ copy_dest
 	mva	#16	sec_cnt
 	mva	#$01	command
 
-w8_1st	lda	#$01
-	bit	command
-	bne	w8_1st
+	lda	#$01
+	bit:rne	command
 
 	lda	#$00
 	sta	$d40e
@@ -94,11 +93,9 @@ play
 	jsr	$a006+4
 	jmp	play
 
-error
-	mva	^4b	^1a
-	jmp	error
 end
 	ini	main
 
 	org	$8000
+; pad to 8k
 :8192-[end-main]-6-6-4 dta $ff
