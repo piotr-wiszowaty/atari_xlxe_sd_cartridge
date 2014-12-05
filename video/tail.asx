@@ -6,21 +6,11 @@ sec_cnt	 equ	$d5ea
 sec_num  equ	$d5eb
 cart_ena equ	$d5ef
 
-	opt	h-f+
 	org	$8000
 
-:10	nop
+:4	nop
 
-	lda	cart_ena
-	cmp	#$ff
-	bne	hardware
-
-; emulator: stop on black screen
-	inc	^40
-	jmp	*
-
-hardware
-	; wait for $a000..$bfff loading completion
+; wait for $a000..$bfff loading completion
 	lda	#$40
 	bit:req	command
 
@@ -28,6 +18,11 @@ hardware
 	mva:rpl	reloc_src,x	reloc_dest,x-
 
 	jmp	reloc_dest
+
+; emulator: stop on black screen
+emu
+	inc	^40
+	jmp	*
 
 reloc_src
 	org	r:$2000
@@ -56,3 +51,5 @@ copy_dest
 
 reloc_len equ *-reloc_dest
 	ert	reloc_len>128
+
+	run	emu
