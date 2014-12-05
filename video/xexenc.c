@@ -389,8 +389,8 @@ static bool encode(const char *input_file)
 		char args[512];
 		snprintf(args, sizeof(args),
 				"time_base=%d/%d:sample_rate=%d:sample_fmt=%s:channel_layout=0x%"PRIx64,
-				 time_base.num, time_base.den, audio_dec_ctx->sample_rate,
-				 av_get_sample_fmt_name(audio_dec_ctx->sample_fmt), audio_dec_ctx->channel_layout);
+				time_base.num, time_base.den, audio_dec_ctx->sample_rate,
+				av_get_sample_fmt_name(audio_dec_ctx->sample_fmt), audio_dec_ctx->channel_layout);
 		if (avfilter_graph_create_filter(&audio_buffersrc_ctx, buffersrc, "in", args, NULL, audio_filter_graph) < 0) {
 			av_log(NULL, AV_LOG_ERROR, "Cannot create audio buffer source\n");
 			return false;
@@ -437,11 +437,12 @@ static bool encode(const char *input_file)
 			av_log(NULL, AV_LOG_ERROR, "Could not allocate filter\n");
 			return false;
 		}
+		AVRational time_base = fmt_ctx->streams[video_stream_index]->time_base;
 		char args[512];
 		snprintf(args, sizeof(args),
 				"video_size=%dx%d:pix_fmt=%d:time_base=%d/%d:pixel_aspect=%d/%d",
 				video_dec_ctx->width, video_dec_ctx->height, video_dec_ctx->pix_fmt,
-				video_dec_ctx->time_base.num, video_dec_ctx->time_base.den,
+				time_base.num, time_base.den,
 				video_dec_ctx->sample_aspect_ratio.num, video_dec_ctx->sample_aspect_ratio.den);
 		if (avfilter_graph_create_filter(&video_buffersrc_ctx, buffersrc, "in", args, NULL, video_filter_graph) < 0) {
 			av_log(NULL, AV_LOG_ERROR, "Cannot create buffer source\n");
