@@ -42,6 +42,7 @@ static enum {
 
 static const char *output_file = NULL;
 static const char *audio_volume = "4";
+static const char *video_filter = NULL;
 
 static FILE *xex;
 static uint8_t ataripal[768];
@@ -481,6 +482,10 @@ static bool encode(const char *input_file)
 			av_log(NULL, AV_LOG_ERROR, "Cannot set output pixel format\n");
 			return false;
 		}
+		if (video_filter != NULL) {
+			snprintf(args, sizeof(args), "%s,%s", video_filters_desc, video_filter);
+			video_filters_desc = args;
+		}
 		if (parse_graph(video_filter_graph, video_buffersrc_ctx, video_buffersink_ctx, video_filters_desc) < 0)
 			return false;
 	}
@@ -568,13 +573,14 @@ static void usage(void)
 	printf(
 		"Usage: xexenc [OPTIONS] INPUTFILE...\n"
 		"Options:\n"
-		"--output=FILE    Set output filename (default: INPUTFILE with .xex extension)\n"
-		"--volume=DECIMAL Set audio volume (default: 4.0)\n"
-		"--video=tip      Set TIP (160x90, 256 colors) graphics mode (default)\n"
-		"--video=hip      Set HIP (160x180, 16 levels of gray) graphics mode\n"
-		"--video=gr8      Set GR8 (320x180, mono) graphics mode\n"
-		"--video=gr9      Set GR9 (80x180, 16 levels of gray) graphics mode\n"
-		"--help           Display this information\n"
+		"--output=FILE          Set output filename (default: INPUTFILE with .xex extension)\n"
+		"--volume=DECIMAL       Set audio volume (default: 4.0)\n"
+		"--video=tip            Set TIP (160x90, 256 colors) graphics mode (default)\n"
+		"--video=hip            Set HIP (160x180, 16 levels of gray) graphics mode\n"
+		"--video=gr8            Set GR8 (320x180, mono) graphics mode\n"
+		"--video=gr9            Set GR9 (80x180, 16 levels of gray) graphics mode\n"
+		"--video-filter=FILTER  Use FFmpeg video filter\n"
+		"--help                 Display this information\n"
 	);
 }
 
@@ -611,6 +617,8 @@ int main(int argc, char **argv)
 				video_mode = GR8;
 			else if (strcmp(arg, "--video=gr9") == 0)
 				video_mode = GR9;
+			else if (strncmp(arg, "--video-filter=", 15) == 0)
+				video_filter = arg + 15;
 			else if (strcmp(arg, "--help") == 0)
 				usage();
 			else {
