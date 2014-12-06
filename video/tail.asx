@@ -6,7 +6,7 @@ sec_cnt	 equ	$d5ea
 sec_num  equ	$d5eb
 cart_ena equ	$d5ef
 
-	org	$8000
+	org	$8006
 
 :4	nop
 
