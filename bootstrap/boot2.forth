@@ -9,6 +9,8 @@
 
 23 constant visible-files
 
+$0F constant dirname-prefix
+
 $01 constant dbg-total-files
 $02 constant dbg-max-heapify
 
@@ -528,8 +530,8 @@ a2i_lut
  dta $E0,$E1,$E2,$E3,$E4,$E5,$E6,$E7,$E8,$E9,$EA,$EB,$EC,$ED,$EE,$EF,$F0,$F1,$F2,$F3,$F4,$F5,$F6,$F7,$F8,$F9,$FA,$FB,$FC,$FD,$FE,$FF
 [end-code] ;
 
-: copy-long-filename
-  0 char-count !
+: copy-long-filename  ( n -- )
+  char-count !
   de-ptr @
   begin
     direntry-size -
@@ -541,8 +543,8 @@ a2i_lut
 : ascii2internal    ( c -- c )
   lit a2i_lut + c@ ;
 
-: copy-short-filename
-  0 char-count !
+: copy-short-filename ( n -- )
+  char-count !
   8 0 do
     de-ptr @ i + c@
     dup 0= if drop leave then
@@ -968,11 +970,18 @@ internal2lowercase_done
       done-sector? @ de-scan-finished? @ or not while
       -1                                                   \ skip direntry flag
       de-ptr @ c@ $E5 = if drop 0 then                     \ deleted/available
-      de-ptr @ c@ $2E = if drop 0 then                     \ '.'/'..'
-      de-ptr @ direntry-attrs + c@ $DE and if drop 0 then  \ not a regular file
+      \ de-ptr @ c@ $2E = if drop 0 then                     \ '.'/'..'
+      de-ptr @ direntry-attrs + c@ $CE and if drop 0 then  \ not a regular file/directory
       if
         \ copy filename to screen buffer
         line-addresses total-files @ cells + @ filename !
+        de-ptr @ direntry-attrs + c@ $10 and if            \ directory
+          \ prepend directories with '/'
+          dirname-prefix filename @ c!
+          1               \ initial char-count
+        else
+          0               \ initial char-count
+        then
         prev-de-attrs @ $0F = if
           copy-long-filename
         else
