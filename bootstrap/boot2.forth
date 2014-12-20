@@ -13,6 +13,7 @@ $0F constant dirname-prefix
 
 $01 constant dbg-total-files
 $02 constant dbg-max-heapify
+$03 constant dbg-preload
 
 $022F constant sdmctl
 $0230 constant dladr
@@ -83,11 +84,14 @@ create msg1 ,' unknown FAT type'
 create error-message-loader-overwrite ,' ERROR: attempted loader overwrite'
 create fs-type 0 c,
 create sectors-per-cluster 0 c,
+create first-run -1 ,
 2variable part0-1st-sector
 2variable fat-size
 2variable fat-start
 2variable first-data-sector
-2variable root-dir-cluster
+2variable root-dir-1st-cluster
+2variable current-dir-1st-cluster
+2variable current-dir-cluster
 variable direntry-sector-counter
 variable de-ptr
 variable total-files
@@ -393,21 +397,21 @@ shift_loop
 : find-next-file-cluster
   current-file-cluster 2@ find-next-cluster current-file-cluster 2! ;
 
-: find-next-root-dir-cluster
-  root-dir-cluster 2@ find-next-cluster root-dir-cluster 2! ;
+: find-next-dir-cluster
+  current-dir-cluster 2@ find-next-cluster current-dir-cluster 2! ;
 
 \ sector_number = first-data-sector +
-\    sectors_per_cluster * (root-dir-cluster - 2) +
+\    sectors_per_cluster * (current-dir-cluster - 2) +
 \    direntry-sector-counter
-: load-root-dir-sector
-  root-dir-cluster 2@ cluster-to-sector
+: load-current-dir-sector
+  current-dir-cluster 2@ cluster-to-sector
   direntry-sector-counter @ 0 d+
   swap sec-num 2!
   [ sec-buf1 $8000 - 512 / 1 + ] literal sec-offs c!
   cart-read ;
 
-: last-root-dir-cluster?
-  root-dir-cluster 2@ $0FFF and swap $FFF8 and swap $FFF8 $0FFF d= ;
+: last-dir-cluster?
+  current-dir-cluster 2@ $0FFF and swap $FFF8 and swap $FFF8 $0FFF d= ;
 
 \ addr1 : direntry
 \ addr2 : filename
@@ -530,8 +534,8 @@ a2i_lut
  dta $E0,$E1,$E2,$E3,$E4,$E5,$E6,$E7,$E8,$E9,$EA,$EB,$EC,$ED,$EE,$EF,$F0,$F1,$F2,$F3,$F4,$F5,$F6,$F7,$F8,$F9,$FA,$FB,$FC,$FD,$FE,$FF
 [end-code] ;
 
-: copy-long-filename  ( n -- )
-  char-count !
+: copy-long-filename  ( f -- )
+  if 1 else 0 then char-count !         \ skip 1st char for directories
   de-ptr @
   begin
     direntry-size -
@@ -543,8 +547,8 @@ a2i_lut
 : ascii2internal    ( c -- c )
   lit a2i_lut + c@ ;
 
-: copy-short-filename ( n -- )
-  char-count !
+: copy-short-filename ( f -- )
+  dup if 1 else 0 then char-count !     \ skip 1st char for directories
   8 0 do
     de-ptr @ i + c@
     dup 0= if drop leave then
@@ -553,7 +557,7 @@ a2i_lut
     filename @ char-count @ + c!
     char-count ++
   loop
-  $0e filename @ char-count @ + c!
+  not if $0e filename @ char-count @ + c! then  \ do not display '.' for directories
   char-count ++
   12 8 do
     de-ptr @ i + c@
@@ -885,6 +889,11 @@ internal2lowercase_done
   swap over @ !
   dup @ 2 + swap ! ;
 
+: restart
+[code]
+ jmp $8000
+[end-code] ;
+
 : main
   0 negative !
 
@@ -932,7 +941,14 @@ internal2lowercase_done
   first-data-sector 2!
 
   \ save root dir cluster
-  sec-buf1 bpb-root-cluster + 2@ swap root-dir-cluster 2!
+  sec-buf1 bpb-root-cluster + 2@ swap root-dir-1st-cluster 2!
+
+  first-run @ if
+    root-dir-1st-cluster 2@ current-dir-1st-cluster 2!
+    0 first-run !
+  then
+
+  current-dir-1st-cluster 2@ current-dir-cluster 2!
 
   256 0 do
     i filename-indexes i + c!
@@ -947,7 +963,7 @@ internal2lowercase_done
     then +
   loop drop
 
-  \ scan root directory entries
+  \ scan directory entries
   0 total-files !
   0 de-scan-finished? !
   0 prev-de-attrs !
@@ -957,7 +973,7 @@ internal2lowercase_done
   begin
     de-scan-finished? @ not while
     shift-sec-buf
-    load-root-dir-sector
+    load-current-dir-sector
     direntry-sector-counter ++
     [ sec-buf1 512 + ] literal de-ptr !
     0 done-sector? !
@@ -970,18 +986,15 @@ internal2lowercase_done
       done-sector? @ de-scan-finished? @ or not while
       -1                                                   \ skip direntry flag
       de-ptr @ c@ $E5 = if drop 0 then                     \ deleted/available
-      \ de-ptr @ c@ $2E = if drop 0 then                     \ '.'/'..'
       de-ptr @ direntry-attrs + c@ $CE and if drop 0 then  \ not a regular file/directory
+      de-ptr @ direntry-attrs + c@ $10 and if              \ directory
+        de-ptr @ @ $202E = if drop 0 then                  \ . (this directory)
+      then
       if
         \ copy filename to screen buffer
         line-addresses total-files @ cells + @ filename !
-        de-ptr @ direntry-attrs + c@ $10 and if            \ directory
-          \ prepend directories with '/'
-          dirname-prefix filename @ c!
-          1               \ initial char-count
-        else
-          0               \ initial char-count
-        then
+        de-ptr @ direntry-attrs + c@ $10 and 0 <>          \ is-directory flag
+        dup if dirname-prefix filename @ c! then           \ prepend directory names with '/'
         prev-de-attrs @ $0F = if
           copy-long-filename
         else
@@ -1003,28 +1016,30 @@ internal2lowercase_done
       de-ptr @ direntry-size + de-ptr !
     repeat
     direntry-sector-counter @ sectors-per-cluster c@ = if
-      find-next-root-dir-cluster
-      last-root-dir-cluster? if -1 de-scan-finished? ! then
+      find-next-dir-cluster
+      last-dir-cluster? if -1 de-scan-finished? ! then
       0 direntry-sector-counter !
     then
   repeat
 
-  \ build max heap
-  total-files @ heap-size !
-  1 heap-size @ 2/ do
-    i max-heapify
-  -1 +loop
-  \ sort filenames
-  begin
-    heap-size @ 1 > while
-    \ swap elements heap[1] and heap[n]
-    filename-indexes c@ filename-indexes heap-size @ 1- + c@
-    filename-indexes c! filename-indexes heap-size @ 1- + c!
-    \ discard node n from heap
-    heap-size @ 1- heap-size !
-    \ fix heap
-    1 max-heapify
-  repeat
+  total-files @ 1 > if
+    \ build max heap
+    total-files @ heap-size !
+    1 heap-size @ 2/ do
+      i max-heapify
+    -1 +loop
+    \ sort filenames
+    begin
+      heap-size @ 1 > while
+      \ swap elements heap[1] and heap[n]
+      filename-indexes c@ filename-indexes heap-size @ 1- + c@
+      filename-indexes c! filename-indexes heap-size @ 1- + c!
+      \ discard node n from heap
+      heap-size @ 1- heap-size !
+      \ fix heap
+      1 max-heapify
+    repeat
+  then
   regenerate-dlist
   switch-dlist
 
@@ -1049,6 +1064,19 @@ internal2lowercase_done
   filename-indexes selected-file-index @ + c@ 2 lshift
   file-sizes + 2@
   selected-file-size 2!
+
+  \ restart file selector when directory selected
+  filename-indexes selected-file-index @ + c@ cells
+  line-addresses + @ c@
+  $7F and             \ un-highlight 1st char
+  dirname-prefix = if
+    current-file-cluster 2@ 0 0 d= if
+      root-dir-1st-cluster 2@ current-dir-1st-cluster 2!
+    else
+      current-file-cluster 2@ current-dir-1st-cluster 2!
+    then
+    restart
+  then
 
   $FF $D301 c!        \ turn off Basic ROM
   $01 $3F8 c!         \ BASICF (0 = enabled)
