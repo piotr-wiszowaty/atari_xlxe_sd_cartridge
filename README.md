@@ -48,7 +48,9 @@ RAM region `$8000+512*<OFFSET>..$8000+512*(<OFFSET>+<SECTOR_COUNT>)-1`.
 
 `$D5EF` :
 
-* unused
+* bit5..bit0 - unused
+* bit6=1 - turn on cartridge memory `$8000..$9FFF`
+* bit7=1 - turn on cartridge memory `$A000..$BFFF`
 
 Example usage
 -------------
