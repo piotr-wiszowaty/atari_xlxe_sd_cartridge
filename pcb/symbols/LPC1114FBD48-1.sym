@@ -1,1 +1,542 @@
-/home/p/share/gedasymbols.org/www/user/piotr_wiszowaty/symbols/LPC1114FBD48-1.sym
+v 20121203 2
+P 7900 3800 7600 3800 1 0 0
+{
+T 7900 3800 5 10 0 0 0 6 1
+pintype=unknown
+T 7545 3795 5 10 1 1 0 6 1
+pinlabel=PIO2_6
+T 7695 3845 5 10 1 1 0 0 1
+pinnumber=1
+T 7900 3800 5 10 0 0 0 6 1
+pinseq=0
+}
+P 7900 5600 7600 5600 1 0 0
+{
+T 7900 5600 5 10 0 0 0 6 1
+pintype=unknown
+T 7545 5595 5 10 1 1 0 6 1
+pinlabel=PIO2_0/\_DTR\_
+T 7695 5645 5 10 1 1 0 0 1
+pinnumber=2
+T 7900 5600 5 10 0 0 0 6 1
+pinseq=0
+}
+P 0 9500 300 9500 1 0 0
+{
+T 0 9500 5 10 0 0 0 0 1
+pintype=unknown
+T 355 9495 5 10 1 1 0 0 1
+pinlabel=\_RESET\_/PIO0_0
+T 205 9545 5 10 1 1 0 6 1
+pinnumber=3
+T 0 9500 5 10 0 0 0 0 1
+pinseq=0
+}
+P 0 9200 300 9200 1 0 0
+{
+T 0 9200 5 10 0 0 0 0 1
+pintype=unknown
+T 355 9195 5 10 1 1 0 0 1
+pinlabel=PIO0_1/CLKOUT/CT32B0_MAT2/USB_FTOGGLE
+T 205 9245 5 10 1 1 0 6 1
+pinnumber=4
+T 0 9200 5 10 0 0 0 0 1
+pinseq=0
+}
+P 0 200 300 200 1 0 0
+{
+T 0 200 5 10 0 0 0 0 1
+pintype=unknown
+T 355 195 5 10 1 1 0 0 1
+pinlabel=VSS
+T 205 245 5 10 1 1 0 6 1
+pinnumber=5
+T 0 200 5 10 0 0 0 0 1
+pinseq=0
+}
+P 0 5100 300 5100 1 0 0
+{
+T 0 5100 5 10 0 0 0 0 1
+pintype=unknown
+T 355 5095 5 10 1 1 0 0 1
+pinlabel=XTALIN
+T 205 5145 5 10 1 1 0 6 1
+pinnumber=6
+T 0 5100 5 10 0 0 0 0 1
+pinseq=0
+}
+P 0 4000 300 4000 1 0 0
+{
+T 0 4000 5 10 0 0 0 0 1
+pintype=unknown
+T 355 3995 5 10 1 1 0 0 1
+pinlabel=XTALOUT
+T 205 4045 5 10 1 1 0 6 1
+pinnumber=7
+T 0 4000 5 10 0 0 0 0 1
+pinseq=0
+}
+P 0 2600 300 2600 1 0 0
+{
+T 0 2600 5 10 0 0 0 0 1
+pintype=unknown
+T 355 2595 5 10 1 1 0 0 1
+pinlabel=VDD
+T 205 2645 5 10 1 1 0 6 1
+pinnumber=8
+T 0 2600 5 10 0 0 0 0 1
+pinseq=0
+}
+P 7900 7100 7600 7100 1 0 0
+{
+T 7900 7100 5 10 0 0 0 6 1
+pintype=unknown
+T 7545 7095 5 10 1 1 0 6 1
+pinlabel=PIO1_8/CT16B1_CAP0
+T 7695 7145 5 10 1 1 0 0 1
+pinnumber=9
+T 7900 7100 5 10 0 0 0 6 1
+pinseq=0
+}
+P 0 8900 300 8900 1 0 0
+{
+T 0 8900 5 10 0 0 0 0 1
+pintype=unknown
+T 355 8895 5 10 1 1 0 0 1
+pinlabel=PIO0_2/SSEL/CT16B0_CAP0
+T 205 8945 5 10 1 1 0 6 1
+pinnumber=10
+T 0 8900 5 10 0 0 0 0 1
+pinseq=0
+}
+P 7900 3500 7600 3500 1 0 0
+{
+T 7900 3500 5 10 0 0 0 6 1
+pintype=unknown
+T 7545 3495 5 10 1 1 0 6 1
+pinlabel=PIO2_7
+T 7695 3545 5 10 1 1 0 0 1
+pinnumber=11
+T 7900 3500 5 10 0 0 0 6 1
+pinseq=0
+}
+P 7900 3200 7600 3200 1 0 0
+{
+T 7900 3200 5 10 0 0 0 6 1
+pintype=unknown
+T 7545 3195 5 10 1 1 0 6 1
+pinlabel=PIO2_8
+T 7695 3245 5 10 1 1 0 0 1
+pinnumber=12
+T 7900 3200 5 10 0 0 0 6 1
+pinseq=0
+}
+P 7900 5300 7600 5300 1 0 0
+{
+T 7900 5300 5 10 0 0 0 6 1
+pintype=unknown
+T 7900 5300 5 10 0 0 0 6 1
+pinseq=0
+T 7545 5295 5 10 1 1 0 6 1
+pinlabel=PIO2_1/\_DSR\_/SCK1
+T 7695 5345 5 10 1 1 0 0 1
+pinnumber=13
+}
+P 0 8600 300 8600 1 0 0
+{
+T 0 8600 5 10 0 0 0 0 1
+pintype=unknown
+T 0 8600 5 10 0 0 0 0 1
+pinseq=0
+T 355 8595 5 10 1 1 0 0 1
+pinlabel=PIO0_3
+T 205 8645 5 10 1 1 0 6 1
+pinnumber=14
+}
+P 0 8300 300 8300 1 0 0
+{
+T 0 8300 5 10 0 0 0 0 1
+pintype=unknown
+T 0 8300 5 10 0 0 0 0 1
+pinseq=0
+T 355 8295 5 10 1 1 0 0 1
+pinlabel=PIO0_4/SCL
+T 205 8345 5 10 1 1 0 6 1
+pinnumber=15
+}
+P 0 8000 300 8000 1 0 0
+{
+T 0 8000 5 10 0 0 0 0 1
+pintype=unknown
+T 0 8000 5 10 0 0 0 0 1
+pinseq=0
+T 355 7995 5 10 1 1 0 0 1
+pinlabel=PIO0_5/SDA
+T 205 8045 5 10 1 1 0 6 1
+pinnumber=16
+}
+P 7900 6800 7600 6800 1 0 0
+{
+T 7900 6800 5 10 0 0 0 6 1
+pintype=unknown
+T 7900 6800 5 10 0 0 0 6 1
+pinseq=0
+T 7545 6795 5 10 1 1 0 6 1
+pinlabel=PIO1_9/CT16B1_MAT0
+T 7695 6845 5 10 1 1 0 0 1
+pinnumber=17
+}
+P 7900 500 7600 500 1 0 0
+{
+T 7900 500 5 10 0 0 0 6 1
+pintype=unknown
+T 7900 500 5 10 0 0 0 6 1
+pinseq=0
+T 7545 495 5 10 1 1 0 6 1
+pinlabel=PIO3_4
+T 7695 545 5 10 1 1 0 0 1
+pinnumber=18
+}
+P 7900 4400 7600 4400 1 0 0
+{
+T 7900 4400 5 10 0 0 0 6 1
+pintype=unknown
+T 7900 4400 5 10 0 0 0 6 1
+pinseq=0
+T 7545 4395 5 10 1 1 0 6 1
+pinlabel=PIO2_4
+T 7695 4445 5 10 1 1 0 0 1
+pinnumber=19
+}
+P 7900 4100 7600 4100 1 0 0
+{
+T 7900 4100 5 10 0 0 0 6 1
+pintype=unknown
+T 7900 4100 5 10 0 0 0 6 1
+pinseq=0
+T 7545 4095 5 10 1 1 0 6 1
+pinlabel=PIO2_5
+T 7695 4145 5 10 1 1 0 0 1
+pinnumber=20
+}
+P 7900 200 7600 200 1 0 0
+{
+T 7900 200 5 10 0 0 0 6 1
+pintype=unknown
+T 7900 200 5 10 0 0 0 6 1
+pinseq=0
+T 7545 195 5 10 1 1 0 6 1
+pinlabel=PIO3_5
+T 7695 245 5 10 1 1 0 0 1
+pinnumber=21
+}
+P 0 7700 300 7700 1 0 0
+{
+T 0 7700 5 10 0 0 0 0 1
+pintype=unknown
+T 0 7700 5 10 0 0 0 0 1
+pinseq=0
+T 355 7695 5 10 1 1 0 0 1
+pinlabel=PIO0_6/SCK0
+T 205 7745 5 10 1 1 0 6 1
+pinnumber=22
+}
+P 0 7400 300 7400 1 0 0
+{
+T 0 7400 5 10 0 0 0 0 1
+pintype=unknown
+T 0 7400 5 10 0 0 0 0 1
+pinseq=0
+T 355 7395 5 10 1 1 0 0 1
+pinlabel=PIO0_7/\_CTS\_
+T 205 7445 5 10 1 1 0 6 1
+pinnumber=23
+}
+P 7900 2900 7600 2900 1 0 0
+{
+T 7900 2900 5 10 0 0 0 6 1
+pintype=unknown
+T 7900 2900 5 10 0 0 0 6 1
+pinseq=0
+T 7545 2895 5 10 1 1 0 6 1
+pinlabel=PIO2_9
+T 7695 2945 5 10 1 1 0 0 1
+pinnumber=24
+}
+P 7900 2600 7600 2600 1 0 0
+{
+T 7900 2600 5 10 0 0 0 6 1
+pintype=unknown
+T 7900 2600 5 10 0 0 0 6 1
+pinseq=0
+T 7545 2595 5 10 1 1 0 6 1
+pinlabel=PIO2_10
+T 7695 2645 5 10 1 1 0 0 1
+pinnumber=25
+}
+P 7900 5000 7600 5000 1 0 0
+{
+T 7900 5000 5 10 0 0 0 6 1
+pintype=unknown
+T 7900 5000 5 10 0 0 0 6 1
+pinseq=0
+T 7545 4995 5 10 1 1 0 6 1
+pinlabel=PIO2_2/\_DCD\_/MISO1
+T 7695 5045 5 10 1 1 0 0 1
+pinnumber=26
+}
+P 0 7100 300 7100 1 0 0
+{
+T 0 7100 5 10 0 0 0 0 1
+pintype=unknown
+T 0 7100 5 10 0 0 0 0 1
+pinseq=0
+T 355 7095 5 10 1 1 0 0 1
+pinlabel=PIO0_8/MISO0/CT16B0_MAT0
+T 205 7145 5 10 1 1 0 6 1
+pinnumber=27
+}
+P 0 6800 300 6800 1 0 0
+{
+T 0 6800 5 10 0 0 0 0 1
+pintype=unknown
+T 0 6800 5 10 0 0 0 0 1
+pinseq=0
+T 355 6795 5 10 1 1 0 0 1
+pinlabel=PIO0_9/MOSI0/CT16B0_MAT1
+T 205 6845 5 10 1 1 0 6 1
+pinnumber=28
+}
+P 0 6500 300 6500 1 0 0
+{
+T 0 6500 5 10 0 0 0 0 1
+pintype=unknown
+T 0 6500 5 10 0 0 0 0 1
+pinseq=0
+T 355 6495 5 10 1 1 0 0 1
+pinlabel=SWCLK/PIO0_10/SCK0/CT16B0_MAT2
+T 205 6545 5 10 1 1 0 6 1
+pinnumber=29
+}
+P 7900 6500 7600 6500 1 0 0
+{
+T 7900 6500 5 10 0 0 0 6 1
+pintype=unknown
+T 7900 6500 5 10 0 0 0 6 1
+pinseq=0
+T 7545 6495 5 10 1 1 0 6 1
+pinlabel=PIO1_10/AD6/CT16B1_MAT1
+T 7695 6545 5 10 1 1 0 0 1
+pinnumber=30
+}
+P 7900 2300 7600 2300 1 0 0
+{
+T 7900 2300 5 10 0 0 0 6 1
+pintype=unknown
+T 7900 2300 5 10 0 0 0 6 1
+pinseq=0
+T 7545 2295 5 10 1 1 0 6 1
+pinlabel=PIO2_11/SCK0
+T 7695 2345 5 10 1 1 0 0 1
+pinnumber=31
+}
+P 0 6200 300 6200 1 0 0
+{
+T 0 6200 5 10 0 0 0 0 1
+pintype=unknown
+T 0 6200 5 10 0 0 0 0 1
+pinseq=0
+T 355 6195 5 10 1 1 0 0 1
+pinlabel=R/PIO0_11/AD0/CT32B0_MAT3
+T 205 6245 5 10 1 1 0 6 1
+pinnumber=32
+}
+P 7900 9500 7600 9500 1 0 0
+{
+T 7900 9500 5 10 0 0 0 6 1
+pintype=unknown
+T 7900 9500 5 10 0 0 0 6 1
+pinseq=0
+T 7545 9495 5 10 1 1 0 6 1
+pinlabel=R/PIO1_0/AD1/CT32B1_CAP0
+T 7695 9545 5 10 1 1 0 0 1
+pinnumber=33
+}
+P 7900 9200 7600 9200 1 0 0
+{
+T 7900 9200 5 10 0 0 0 6 1
+pintype=unknown
+T 7900 9200 5 10 0 0 0 6 1
+pinseq=0
+T 7545 9195 5 10 1 1 0 6 1
+pinlabel=R/PIO1_1/AD2/CT32B1_MAT0
+T 7695 9245 5 10 1 1 0 0 1
+pinnumber=34
+}
+P 7900 8900 7600 8900 1 0 0
+{
+T 7900 8900 5 10 0 0 0 6 1
+pintype=unknown
+T 7900 8900 5 10 0 0 0 6 1
+pinseq=0
+T 7545 8895 5 10 1 1 0 6 1
+pinlabel=R/PIO1_2/AD3/CT32B1_MAT1
+T 7695 8945 5 10 1 1 0 0 1
+pinnumber=35
+}
+P 7900 1700 7600 1700 1 0 0
+{
+T 7900 1700 5 10 0 0 0 6 1
+pintype=unknown
+T 7900 1700 5 10 0 0 0 6 1
+pinseq=0
+T 7545 1695 5 10 1 1 0 6 1
+pinlabel=PIO3_0/\_DTR\_
+T 7695 1745 5 10 1 1 0 0 1
+pinnumber=36
+}
+P 7900 1400 7600 1400 1 0 0
+{
+T 7900 1400 5 10 0 0 0 6 1
+pintype=unknown
+T 7900 1400 5 10 0 0 0 6 1
+pinseq=0
+T 7545 1395 5 10 1 1 0 6 1
+pinlabel=PIO3_1/\_DSR\_
+T 7695 1445 5 10 1 1 0 0 1
+pinnumber=37
+}
+P 7900 4700 7600 4700 1 0 0
+{
+T 7900 4700 5 10 0 0 0 6 1
+pintype=unknown
+T 7900 4700 5 10 0 0 0 6 1
+pinseq=0
+T 7545 4695 5 10 1 1 0 6 1
+pinlabel=PIO2_3/\_RI\_/MOSI1
+T 7695 4745 5 10 1 1 0 0 1
+pinnumber=38
+}
+P 7900 8600 7600 8600 1 0 0
+{
+T 7900 8600 5 10 0 0 0 6 1
+pintype=unknown
+T 7900 8600 5 10 0 0 0 6 1
+pinseq=0
+T 7545 8595 5 10 1 1 0 6 1
+pinlabel=SWDIO/PIO1_3/AD4/CT32B1_MAT2
+T 7695 8645 5 10 1 1 0 0 1
+pinnumber=39
+}
+P 7900 8300 7600 8300 1 0 0
+{
+T 7900 8300 5 10 0 0 0 6 1
+pintype=unknown
+T 7900 8300 5 10 0 0 0 6 1
+pinseq=0
+T 7545 8295 5 10 1 1 0 6 1
+pinlabel=PIO1_4/AD5/CT32B1_MAT3/WAKEUP
+T 7695 8345 5 10 1 1 0 0 1
+pinnumber=40
+}
+P 0 500 300 500 1 0 0
+{
+T 0 500 5 10 0 0 0 0 1
+pintype=unknown
+T 0 500 5 10 0 0 0 0 1
+pinseq=0
+T 355 495 5 10 1 1 0 0 1
+pinlabel=VSS
+T 205 545 5 10 1 1 0 6 1
+pinnumber=41
+}
+P 7900 6200 7600 6200 1 0 0
+{
+T 7900 6200 5 10 0 0 0 6 1
+pintype=unknown
+T 7900 6200 5 10 0 0 0 6 1
+pinseq=0
+T 7545 6195 5 10 1 1 0 6 1
+pinlabel=PIO1_11/AD7
+T 7695 6245 5 10 1 1 0 0 1
+pinnumber=42
+}
+P 7900 1100 7600 1100 1 0 0
+{
+T 7900 1100 5 10 0 0 0 6 1
+pintype=unknown
+T 7900 1100 5 10 0 0 0 6 1
+pinseq=0
+T 7545 1095 5 10 1 1 0 6 1
+pinlabel=PIO3_2/\_DCD\_
+T 7695 1145 5 10 1 1 0 0 1
+pinnumber=43
+}
+P 0 1800 300 1800 1 0 0
+{
+T 0 1800 5 10 0 0 0 0 1
+pintype=unknown
+T 0 1800 5 10 0 0 0 0 1
+pinseq=0
+T 355 1795 5 10 1 1 0 0 1
+pinlabel=VDD
+T 205 1845 5 10 1 1 0 6 1
+pinnumber=44
+}
+P 7900 8000 7600 8000 1 0 0
+{
+T 7900 8000 5 10 0 0 0 6 1
+pintype=unknown
+T 7900 8000 5 10 0 0 0 6 1
+pinseq=0
+T 7545 7995 5 10 1 1 0 6 1
+pinlabel=PIO1_5/\_RTS\_/CT32B0_CAP0
+T 7695 8045 5 10 1 1 0 0 1
+pinnumber=45
+}
+P 7900 7700 7600 7700 1 0 0
+{
+T 7900 7700 5 10 0 0 0 6 1
+pintype=unknown
+T 7900 7700 5 10 0 0 0 6 1
+pinseq=0
+T 7545 7695 5 10 1 1 0 6 1
+pinlabel=PIO1_6/RXD/CT32B0_MAT0
+T 7695 7745 5 10 1 1 0 0 1
+pinnumber=46
+}
+P 7900 7400 7600 7400 1 0 0
+{
+T 7900 7400 5 10 0 0 0 6 1
+pintype=unknown
+T 7900 7400 5 10 0 0 0 6 1
+pinseq=0
+T 7545 7395 5 10 1 1 0 6 1
+pinlabel=PIO1_7/TXD/CT32B0_MAT1
+T 7695 7445 5 10 1 1 0 0 1
+pinnumber=47
+}
+P 7900 800 7600 800 1 0 0
+{
+T 7900 800 5 10 0 0 0 6 1
+pintype=unknown
+T 7900 800 5 10 0 0 0 6 1
+pinseq=0
+T 7545 795 5 10 1 1 0 6 1
+pinlabel=PIO3_3/\_RI\_
+T 7695 845 5 10 1 1 0 0 1
+pinnumber=48
+}
+B 300 0 7300 9700 3 0 1 0 -1 -1 0 -1 -1 -1 -1 -1
+T 300 10000 8 10 0 0 0 0 1
+author=Piotr Wiszowaty pwiszowaty458@gmail.com
+T 300 10400 8 10 0 0 0 0 1
+dist-license=GPL 2
+T 300 10200 8 10 0 0 0 0 1
+use-license=unlimited
+T 300 9800 8 10 1 1 0 0 1
+device=LPC1114FBD48
+T 7400 9800 8 10 1 1 0 0 1
+refdes=U?
+T 300 10600 8 10 0 0 0 0 1
+footprint=LQFP48_7
