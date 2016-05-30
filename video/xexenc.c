@@ -8,9 +8,6 @@
 #include <libavformat/avformat.h>
 #include <libavutil/opt.h>
 
-#define STRINGIFY0(x) #x
-#define STRINGIFY(x) STRINGIFY0(x)
-
 #define TIP_RGB 1
 
 #if TIP_RGB
@@ -42,6 +39,7 @@ static enum {
 
 static const char *output_file = NULL;
 static const char *audio_volume = "4";
+static const char *video_dither = NULL;
 static const char *video_filter = NULL;
 
 static FILE *xex;
@@ -453,7 +451,7 @@ static bool encode(const char *input_file)
 			return false;
 		}
 		enum AVPixelFormat pix_fmts[2] = { AV_PIX_FMT_NONE, AV_PIX_FMT_NONE };
-		const char *video_filters_desc;
+		const char *scale;
 		switch (video_mode) {
 		case TIP:
 #if TIP_RGB
@@ -461,19 +459,19 @@ static bool encode(const char *input_file)
 #else
 			pix_fmts[0] = AV_PIX_FMT_YUYV422;
 #endif
-			video_filters_desc = "scale=160:90,fps=" STRINGIFY(FPS);
+			scale = "160:90";
 			break;
 		case HIP:
 			pix_fmts[0] = AV_PIX_FMT_GRAY8;
-			video_filters_desc = "scale=160:180,fps=" STRINGIFY(FPS);
+			scale = "160:180";
 			break;
 		case GR8:
 			pix_fmts[0] = AV_PIX_FMT_MONOBLACK;
-			video_filters_desc = "scale=320:180:sws_dither=ed,fps=" STRINGIFY(FPS); // TODO: try sws_dither from https://www.ffmpeg.org/ffmpeg-scaler.html
+			scale = "320:180";
 			break;
 		case GR9:
 			pix_fmts[0] = AV_PIX_FMT_GRAY8;
-			video_filters_desc = "scale=80:180,fps=" STRINGIFY(FPS);
+			scale = "80:180";
 			break;
 		default:
 			fprintf(stderr, "Unknown video mode %d\n", video_mode);
@@ -483,11 +481,10 @@ static bool encode(const char *input_file)
 			av_log(NULL, AV_LOG_ERROR, "Cannot set output pixel format\n");
 			return false;
 		}
-		if (video_filter != NULL) {
-			snprintf(args, sizeof(args), "%s,%s", video_filters_desc, video_filter);
-			video_filters_desc = args;
-		}
-		if (parse_graph(video_filter_graph, video_buffersrc_ctx, video_buffersink_ctx, video_filters_desc) < 0)
+		snprintf(args, sizeof(args), "scale=%s%s%s,fps=%d%s%s", scale,
+			video_dither != NULL ? ":sws_dither=" : "", video_dither != NULL ? video_dither : "", FPS,
+			video_filter != NULL ? "," : "", video_filter != NULL ? video_filter : "");
+		if (parse_graph(video_filter_graph, video_buffersrc_ctx, video_buffersink_ctx, args) < 0)
 			return false;
 	}
 
@@ -580,6 +577,7 @@ static void usage(void)
 		"--video=hip            Set HIP (160x180, 16 levels of gray) graphics mode\n"
 		"--video=gr8            Set GR8 (320x180, mono) graphics mode\n"
 		"--video=gr9            Set GR9 (80x180, 16 levels of gray) graphics mode\n"
+		"--video-dither=DITHER  Select dithering (auto, none, bayer, ed, a_dither, x_dither)\n"
 		"--video-filter=FILTER  Use FFmpeg video filter\n"
 		"--help                 Display this information\n"
 	);
@@ -618,6 +616,8 @@ int main(int argc, char **argv)
 				video_mode = GR8;
 			else if (strcmp(arg, "--video=gr9") == 0)
 				video_mode = GR9;
+			else if (strncmp(arg, "--video-dither=", 15) == 0)
+				video_dither = arg + 15;
 			else if (strncmp(arg, "--video-filter=", 15) == 0)
 				video_filter = arg + 15;
 			else if (strcmp(arg, "--help") == 0)
