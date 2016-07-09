@@ -142,12 +142,16 @@ static bool create_xex(const char *input_file)
 
 static int audio_sample(int16_t s)
 {
-	s = (s + 0x8000 + (rand() & 0xfff)) >> 12;
+	int16_t hi;
+	int16_t lo;
+	s = (s + 0x8000) >> 11;
 	if (s < 0)
-		return 0xf0;
-	if (s > 0xf)
+		return 0x00;
+	if (s > 0x1f)
 		return 0xff;
-	return 0xf0 | s;
+	hi = s >> 1;
+	lo = s - hi;
+	return (hi << 4) | lo;
 }
 
 static void audio_frame(const AVFrame *frame)

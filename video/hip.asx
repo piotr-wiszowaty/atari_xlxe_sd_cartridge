@@ -9,14 +9,24 @@ scr	equ	half-lines*40
 smp_end		equ	main+$1ff2
 smp	equ	smp_end-scanlines
 
+hi	equ	$ff
+losnd	equ	$800
+hisnd	equ	$900
+
 	org	main
 
 	sei
 	inc	^4e
 	lda	#124
 	cmp:rne	^4b
-	mvx	smp	^4a
+	ldx	smp
+	lda	hisnd,x
+	sta	hi
+	lda	losnd,x
+	sta	^4a
 	stx	^21
+	lda	hi
+	sta	^23
 	mva	#$22	^40	;6
 	mwa	#dl	^42	;12
 	mvy	#1	^12	;6
@@ -29,8 +39,14 @@ smp	equ	smp_end-scanlines
 	mva	#12	^18	;6
 	mva	#14	^19	;6
 blank
-	mvx	smp,y+	^4a
-	stx	^21
+	ldx	smp,y+
+	lda	hisnd,x
+	sta	hi
+	lda	losnd,x
+	sta	^4a
+	sta	^21
+	lda	hi
+	sta	^23
 	cpy	#scanlines-248
 	bcc	blank
 
@@ -38,9 +54,20 @@ blank
 	lda	#mode
 line
 	eor	#$40^$80
-	mvx	smp_end-256,y+	^4a
+
+	pha
+	ldx	smp_end-256,y
+	lda	hisnd,x
+	sta	hi
+	lda	losnd,x
+	tax
+	stx	^4a
 	stx	^21
+	lda	hi
+	sta	^23
+	pla
 	sta	^1b
+	iny
 	bne	line
 	rts
 

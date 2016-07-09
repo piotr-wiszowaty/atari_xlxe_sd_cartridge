@@ -1,3 +1,6 @@
+losnd	 equ	$800
+hisnd	 equ	$900
+
 fsel_backup equ	$4000
 
 command	 equ	$d5e8
@@ -10,6 +13,23 @@ cart_ena equ	$d5ef
 	org	$2000
 
 main
+	; prepare sound lookup tables
+	ldx	#0
+precalc_sound
+	txa
+	and	#$0f
+	ora	#$10
+	sta	losnd,x
+	txa
+	lsr	@
+	lsr	@
+	lsr	@
+	lsr	@
+	ora	#$10
+	sta	hisnd,x
+	inx
+	bne	precalc_sound
+
 	; turn on cartridge memory
 	sei
 	mva	#$c1	cart_ena
