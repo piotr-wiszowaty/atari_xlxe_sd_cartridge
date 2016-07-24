@@ -9,7 +9,6 @@ scr	equ	half-lines*40
 smp_end		equ	main+$1ff2
 smp	equ	smp_end-scanlines
 
-hi	equ	$ff
 losnd	equ	$800
 hisnd	equ	$900
 
@@ -19,14 +18,14 @@ hisnd	equ	$900
 	inc	^4e
 	lda	#124
 	cmp:rne	^4b
+
 	ldx	smp
+	stx	^4a
 	lda	hisnd,x
-	sta	hi
-	lda	losnd,x
-	sta	^4a
 	sta	^21
-	lda	hi
+	lda	losnd,x
 	sta	^23
+
 	mva	#$22	^40	;6
 	mwa	#dl	^42	;12
 	mvy	#1	^1b	;6
@@ -35,28 +34,28 @@ hisnd	equ	$900
 	mva	#14	^17	;6
 blank
 	ldx	smp,y+
+	stx	^4a
 	lda	hisnd,x
-	sta	hi
-	lda	losnd,x
-	sta	^4a
 	sta	^21
-	lda	hi
+	lda	losnd,x
 	sta	^23
 	cpy	#scanlines-248
 	bcc	blank
 
-	ldy	#256-248
+	ldy	#256-247
 line
-	ldx	smp_end-256,y
+	mvx	smp_end-256-1,y	^4a
 	lda	hisnd,x
-	sta	hi
-	lda	losnd,x
-	sta	^4a
 	sta	^21
-	lda	hi
+	lda	losnd,x
 	sta	^23
 	iny
 	bne	line
+
+	mvx	smp_end	^4a
+	lda	hisnd,x
+	sta	^21
+
 	rts
 
 dl	dta	$70,$70,$70,$50,$4f,a(scr)
