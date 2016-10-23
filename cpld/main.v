@@ -18,8 +18,8 @@
 
 module main(
     input cart_fi2,
-    /*output cart_fi2_copy,*/
-    /*input fi2,*/
+    output cart_fi2_copy,
+    input fi2,
     input cart_s4,
     input cart_s5,
     input cart_rw,
@@ -41,7 +41,7 @@ module main(
     input set_addr_hi,
     input strobe_addr,
     output aux0,
-    output aux1,
+    input aux1,
     input cart_write_enable,
     /*input aux3,*/
     /*input aux4,*/
@@ -74,7 +74,7 @@ reg [7:0] cart_out_data_latch;
 reg [14:0] uc_addr = 0;
 reg [7:0] uc_out_data_latch = 0;
 
-//assign cart_fi2_copy = cart_fi2;
+assign cart_fi2_copy = cart_fi2 ^ aux1;
 
 assign fi2_falling = fi2_r[1] & ~fi2_r[0];
 assign fi2_rising = ~fi2_r[1] & fi2_r[0];
@@ -102,7 +102,7 @@ always @(posedge strobe_addr) begin
         uc_addr <= uc_addr + 1;
 end
 
-always @(posedge cart_fi2) begin
+always @(posedge fi2) begin
     s4_r <= cart_s4;
     s5_r <= cart_s5;
     rw_r <= cart_rw;
@@ -110,7 +110,7 @@ always @(posedge cart_fi2) begin
 end
 
 always @(posedge clk) begin
-    fi2_r <= {fi2_r[0], cart_fi2};
+    fi2_r <= {fi2_r[0], fi2};
     
     if (state_cart_write | state_cart_read | state_uc_write | state_uc_read)
         case (phase)
@@ -176,7 +176,6 @@ assign ram_we = ~((state_cart_write | state_uc_write) & phase[1]);
 
 assign dbg0 = state_uc_read;
 assign dbg1 = ram_oe;
-assign aux0 = rd4_r;
-assign aux1 = rd5_r;
+assign aux0 = 1;
 
 endmodule
