@@ -125,7 +125,7 @@ variable selected-file-index
 variable new-selected-file-index
 variable select-window-top-index
 variable dlist-select
-create legend $DC c, $DD c, ' :select file,' ' [Shift]+Return'* ' :load & run'
+create legend $DC c, $DD c, ' :select file,' ' Return'* ' :load & run        '
 create dlist0
   $70 c, $70 c, $70 c,
   $42 c, screen   0 + ,
@@ -1073,33 +1073,30 @@ internal2lowercase_done
 
   reopen-editor
 
-  \ load & run executable file
-  skstat @ 8 and ( not) if
-    \ copy .com loader to internal memory
-    lit com_loader_start lit com_loader lit com_loader_length cmove
+  \ copy .com loader to internal memory
+  lit com_loader_start lit com_loader lit com_loader_length cmove
 
-    selected-file-size 2@ swap lit file_size 2!
+  selected-file-size 2@ swap lit file_size 2!
 
-    \ generate list of selected file sector numbers
-    lit sectors_list dword-ptr !
-    begin
-      current-file-cluster 2@ cluster-to-sector
-      sectors-per-cluster c@ 0 do
-        \ store sector number
-        2dup i 0 d+ swap dword-ptr @ 2!
-        dword-ptr @ 4 + dword-ptr !
-      loop
-      2drop
-      find-next-file-cluster
-      last-file-cluster? dword-ptr @ $1FFC > or
-    until
+  \ generate list of selected file sector numbers
+  lit sectors_list dword-ptr !
+  begin
+    current-file-cluster 2@ cluster-to-sector
+    sectors-per-cluster c@ 0 do
+      \ store sector number
+      2dup i 0 d+ swap dword-ptr @ 2!
+      dword-ptr @ 4 + dword-ptr !
+    loop
+    2drop
+    find-next-file-cluster
+    last-file-cluster? dword-ptr @ $1FFC > or
+  until
 
-    1 sec-cnt c!
-    0 sec-offs c!
+  1 sec-cnt c!
+  0 sec-offs c!
 
-    \ run 'stream' .com loader
-    run-com
-  then
+  \ run .com loader
+  run-com
   ;
 
 [code]
