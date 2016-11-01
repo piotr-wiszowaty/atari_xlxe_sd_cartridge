@@ -574,51 +574,9 @@ a2i_lut
     char-count ++
   loop ;
 
-: load-file-sector
-  current-file-cluster 2@ cluster-to-sector
-  sector-in-cluster @ 0 d+
-  swap sec-num 2!
-  [ sec-buf1 $8000 - 512 / ] literal sec-offs c!
-  1 sec-cnt c!
-  cart-read
-  0 byte-in-sector !
-  sector-in-cluster ++ ;
-
-: peek-byte
-  byte-in-sector @ 512 = if
-    sector-in-cluster @ sectors-per-cluster c@ = if
-      find-next-file-cluster
-      0 sector-in-cluster !
-    then
-    load-file-sector
-  then ;
-
-: load-byte     ( -- c )
-  peek-byte
-  sec-buf1 byte-in-sector @ + c@
-  byte-in-file 2@ 1 0 d+ byte-in-file 2!
-  byte-in-sector ++ ;
-
-: load-word     ( -- u )
-  load-byte load-byte 8 lshift or ;
-
-: copy-block    ( c addr -- )
-[code]
- jsr com_loader
- jmp next
-[end-code] ;
-
 : com-run
 [code]
  jmp do_com_run
-[end-code] ;
-
-: com-init
-[code]
- stx tmp
- jsr do_com_init
- ldx tmp
- jmp next
 [end-code] ;
 
 : reopen-editor
@@ -1224,7 +1182,6 @@ com_loader_start equ com_loader_setup_start+com_loader_setup_length
 load_byte_ptr equ tmp
 
 com_loader
- ; TODO: build display list at $BC20
  sei
  lda #0
  sta $D5EF
@@ -1232,6 +1189,8 @@ com_loader
  lda $D013
  sta $3FA
  cli
+
+ ; TODO: build display list at $BC20
 
  lda #0
  sta $2E0
