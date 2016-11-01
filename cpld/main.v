@@ -52,6 +52,7 @@ module main(
 wire cart_select;
 wire cart_ram_select;
 wire cart_d5_select;
+wire cart_d5ef_select;
 wire fi2_falling;
 wire fi2_rising;
 
@@ -74,18 +75,23 @@ reg [7:0] cart_out_data_latch;
 reg [14:0] uc_addr = 0;
 reg [7:0] uc_out_data_latch = 0;
 
+reg [13:0] read_address = 0;
+
 assign cart_fi2_copy = cart_fi2 ^ aux1;
 
 assign fi2_falling = fi2_r[1] & ~fi2_r[0];
 assign fi2_rising = ~fi2_r[1] & fi2_r[0];
 
 assign cart_ram_select = s4_r ^ s5_r;
-assign cart_d5_select = ~cctl_r & (cart_addr[7:3] == 5'b11101);  // D5E8-D5EF
+assign cart_d5_select = ~cctl_r & (cart_addr[7:3] == 5'b11101);  		// D5E8-D5EF
+//assign cart_d5ef_select = ~cctl_r & (cart_addr[7:0] == 8'b11101111);	// D5EF
+assign cart_d5ef_select = cart_d5_select & cart_addr[2:0] == 3'b111;
 assign cart_select = cart_ram_select | cart_d5_select;
 
 assign cart_data = (cart_select & cart_rw & cart_fi2) ? cart_out_data_latch : 8'hzz;
 
-assign ram_addr = (state_cart_write | state_cart_read) ? {cctl_r, s4_r, cart_addr} :
+assign ram_addr = (state_cart_read & cart_d5ef_select) ? {1'b1, read_address} :
+	              (state_cart_write | state_cart_read) ? {cctl_r, s4_r, cart_addr} :
                   uc_addr;
 assign ram_data = state_cart_write ? cart_data :
                   state_uc_write ? uc_data :
@@ -169,6 +175,11 @@ always @(posedge clk) begin
 
     if (fi2_rising & ~cart_select)
         {cart_rd5, cart_rd4} <= {rd5_r, rd4_r};
+
+	if (state_cart_read & cart_d5ef_select & phase == 2'b00)
+		read_address <= read_address + 1;
+	else if (state_cart_write & cart_d5ef_select & phase == 2'b00)
+		read_address <= {cart_data[4:0], 9'b0};
 end
 
 assign ram_oe = ~(state_cart_read | state_uc_read);

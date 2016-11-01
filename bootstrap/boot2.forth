@@ -36,10 +36,12 @@ $A600 constant file-sizes
 $AA00 constant sec-buf1
 $AE00 constant fat-buf
 $D01F constant consol
+$D20F constant skstat
 $D5E8 constant command
 $D5E9 constant sec-offs
 $D5EA constant sec-cnt
 $D5EB constant sec-num
+$D5EF constant map-ctl
 
 \ master boot record
 $1BE constant mbr-pi
@@ -113,6 +115,7 @@ variable byte-in-sector
 2variable byte-in-file
 2variable current-file-cluster
 2variable selected-file-size
+variable dword-ptr
 variable byte-ptr
 variable byte-index
 variable block-end
@@ -122,7 +125,7 @@ variable selected-file-index
 variable new-selected-file-index
 variable select-window-top-index
 variable dlist-select
-create legend $DC c, $DD c, ' :select file,' ' Return'* ' :load & run        '
+create legend $DC c, $DD c, ' :select file,' ' [Shift]+Return'* ' :load & run'
 create dlist0
   $70 c, $70 c, $70 c,
   $42 c, screen   0 + ,
@@ -409,6 +412,9 @@ shift_loop
   swap sec-num 2!
   [ sec-buf1 $8000 - 512 / 1 + ] literal sec-offs c!
   cart-read ;
+
+: last-file-cluster?
+  current-file-cluster 2@ $0FFF and swap $FFF8 and swap $FFF8 $0FFF d= ;
 
 : last-dir-cluster?
   current-dir-cluster 2@ $0FFF and swap $FFF8 and swap $FFF8 $0FFF d= ;
@@ -894,7 +900,13 @@ internal2lowercase_done
  jmp $8000
 [end-code] ;
 
+: run-com
+[code]
+ jmp com_loader
+[end-code] ;
+
 : main
+
   0 negative !
 
   \ initialize data addresses in display list
@@ -1103,54 +1115,33 @@ internal2lowercase_done
 
   reopen-editor
 
-  \ copy .com loader to internal memory
-  lit com_loader_start lit com_loader lit com_loader_length cmove
-
   \ load & run executable file
-  0 0 byte-in-file 2!
-  512 byte-in-sector !
-  0 sector-in-cluster !
-  0 runad !
-  load-file-sector
-  begin
-    load-word
-    dup $FFFF = if drop load-word then
-    byte-ptr !
-    load-word block-end !
+  skstat @ 8 and ( not) if
+    \ copy .com loader to internal memory
+    lit com_loader_start lit com_loader lit com_loader_length cmove
 
-    byte-ptr @ [ copy-buffer 256 + ] literal u<
-    block-end @ lit com_loader u>= and
-    if
-      reinitialize-display
-      error-message-loader-overwrite count $BC40 swap cmove
-      begin again
-    then
+    selected-file-size 2@ swap lit file_size 2!
 
-    runad @ 0= if
-      byte-ptr @ runad !
-    then
-
-    lit dummy_init initad !
-
+    \ generate list of selected file sector numbers
+    lit sectors_list dword-ptr !
     begin
-      peek-byte
-      512 byte-in-sector @ -
-      block-end @ 1+ byte-ptr @ - min
-      256 min
-      dup chunk-length !
-      if
-        sec-buf1 byte-in-sector @ + copy-buffer chunk-length @ cmove
-        chunk-length @ byte-ptr @ copy-block
-        chunk-length @ byte-ptr @ + byte-ptr !
-        chunk-length @ byte-in-sector @ + byte-in-sector !
-        chunk-length @ 0 byte-in-file 2@ d+ byte-in-file 2!
-      then
-      byte-ptr @ block-end @ u>
+      current-file-cluster 2@ cluster-to-sector
+      sectors-per-cluster c@ 0 do
+        \ store sector number
+        2dup i 0 d+ swap dword-ptr @ 2!
+        dword-ptr @ 4 + dword-ptr !
+      loop
+      2drop
+      find-next-file-cluster
+      last-file-cluster? dword-ptr @ $1FFC > or
     until
 
-    com-init
-    byte-in-file 2@ selected-file-size 2@ d= if com-run then
-  again
+    1 sec-cnt c!
+    0 sec-offs c!
+
+    \ run 'stream' .com loader
+    run-com
+  then
   ;
 
 [code]
@@ -1225,62 +1216,15 @@ mem_clear_loop_i
  jsr setup_enable_cart
  rts
 
-com_loader_setup_end
-
 com_loader_setup_length equ *-com_loader_setup
 
 com_loader_start equ com_loader_setup_start+com_loader_setup_length
 
- org r:$0700
+ org r:$1000
+load_byte_ptr equ tmp
 
 com_loader
- jsr disable_cart
- lda pstack,x
- inx
- sta w
- lda pstack,x
- inx
- sta w+1
- lda pstack,x
- inx
- inx
- sta cntr
- ldy #0
-com_loader_block_loop
- lda copy_buffer,y
- sta (w),y
- iny
- cpy cntr
- bne com_loader_block_loop
- jsr enable_cart
- rts
-
-do_com_run
- jsr disable_cart
- pla
- pla
- jmp ($2E0)
-
-do_com_init
- jsr disable_cart
- jsr jmp_init
- lda #$C0
- sta $D20E
- jsr enable_cart
- rts
-jmp_init
- jmp ($2E2)
-
-enable_cart
- sei
- lda #$C0
- sta $D5EF
- nop
- lda $D013
- sta $3FA
- rts
-
-disable_cart
+ ; TODO: build display list at $BC20
  sei
  lda #0
  sta $D5EF
@@ -1288,15 +1232,193 @@ disable_cart
  lda $D013
  sta $3FA
  cli
+
+ lda #0
+ sta $2E0
+ sta $2E1
+
+s_segment_loop
+ lda #<s_dummy_init
+ sta $2E2
+ lda #>s_dummy_init
+ sta $2E3
+ ; load header
+ lda #4
+ sta seg_length+0
+ lda #0
+ sta seg_length+1
+ jsr load_byte
+ sta load_byte_ptr+0
+ jsr load_byte
+ sta load_byte_ptr+1
+ ; check for $FFFF
+ lda #$FF
+ cmp load_byte_ptr+0
+ bne s_load_seg_end
+ cmp load_byte_ptr+1
+ bne s_load_seg_end
+ jsr load_byte
+ sta load_byte_ptr+0
+ jsr load_byte
+ sta load_byte_ptr+1
+ inc seg_length+0
+ inc seg_length+0
+s_load_seg_end
+ jsr load_byte
+ sta seg_end+0
+ jsr load_byte
+ sta seg_end+1
+
+ ; calculate segments length
+ lda seg_length+0
+ sec
+ adc seg_end+0
+ sta seg_length+0
+ lda seg_length+1
+ adc seg_end+1
+ sta seg_length+1
+ lda seg_length+0
+ sec
+ sbc load_byte_ptr+0
+ sta seg_length+0
+ lda seg_length+1
+ sbc load_byte_ptr+1
+ sta seg_length+1
+
+ ; decrease file size by headers + segments lengths
+ lda file_size+0
+ sec
+ sbc seg_length+0
+ sta file_size+0
+ lda file_size+1
+ sbc seg_length+1
+ sta file_size+1
+ lda file_size+2
+ sbc #0
+ sta file_size+2
+ lda file_size+3
+ sbc #0
+ sta file_size+3
+
+ ; store the 1st segment
+ lda #0
+ cmp first_seg+0
+ bne done_1st_seg
+ cmp first_seg+1
+ bne done_1st_seg
+ lda load_byte_ptr+0
+ sta first_seg+0
+ lda load_byte_ptr+1
+ sta first_seg+1
+done_1st_seg
+
+ ; load segment
+load_byte_loop
+ jsr load_byte
+ ldy #0
+ sta (load_byte_ptr),y
+ lda load_byte_ptr+0
+ cmp seg_end+0
+ bne load_next_byte
+ lda load_byte_ptr+1
+ cmp seg_end+1
+ beq done_seg
+load_next_byte
+ lda load_byte_ptr+0
+ clc
+ adc #1
+ sta load_byte_ptr+0
+ lda load_byte_ptr+1
+ adc #0
+ sta load_byte_ptr+1
+ jmp load_byte_loop
+done_seg
+
+ ; call init
+ jsr jmp_init
+
+ ; check for file end
+ lda file_size+0
+ bne next_seg
+ lda file_size+1
+ bne next_seg
+ lda file_size+2
+ bne next_seg
+ lda file_size+2
+ beq s_run
+next_seg
+ jmp s_segment_loop
+
+ ; run from $2E0 or the 1st segment
+s_run
+ lda $2E0
+ bne s_runad
+ lda $2E1
+ bne s_runad
+ jmp (first_seg)
+s_runad
+ jmp ($2E0)
+
+jmp_init
+ jmp ($2E2)
+
+s_dummy_init
  rts
 
-dummy_init
+load_byte
+ lda sec_left_bytes+0
+ clc
+ adc #1
+ sta sec_left_bytes+0
+ lda sec_left_bytes+1
+ adc #0
+ sta sec_left_bytes+1
+ bcs load_next_sec
+ lda $D5EF
+ rts
+load_next_sec
+ ldy #0
+set_sec_num
+ lda sectors_list,y
+ sta sec_num,y
+ iny
+ cpy #4
+ bne set_sec_num
+ lda set_sec_num+1
+ clc
+ adc #4
+ sta set_sec_num+1
+ lda set_sec_num+2
+ adc #0
+ sta set_sec_num+2
+ lda #0
+ sta $D5EF
+ lda #1
+ sta $D5E8
+w8_sec
+ bit $D5E8
+ bmi com_error
+ bvc w8_sec
+ lda #$00
+ sta sec_left_bytes+0
+ lda #$FE
+ sta sec_left_bytes+1
+ lda $D5EF
  rts
 
-com_loader_end
+com_error
+ lda $D40B
+ sta $D01A
+ jmp com_error
 
- ert com_loader_end>=copy_buffer
+sec_left_bytes  dta a($FFFF)
+seg_end         dta a(0)
+first_seg       dta a(0)
+seg_length      dta a(0)
+file_size       dta a(0),a(0)
+sec_num_addr    dta a(sectors_list)
+sectors_list    equ *
 
 com_loader_length equ *-com_loader
- ert com_loader_start+com_loader_length>=file_sizes
+
 [end-code]

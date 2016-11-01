@@ -11,6 +11,8 @@ The cartridge occupies address space `$8000..$BFFF`. Read and write operations
 are controlled through 8 registers mapped to `$D5E8..$D5EF`. Each read/write
 operates on SD card sectors `<SECTOR_NUM>..<SECTOR_NUM>+<SECTOR_COUNT>-1` and
 RAM region `$8000+512*<OFFSET>..$8000+512*(<OFFSET>+<SECTOR_COUNT>)-1`.
+Additionaly read operation may be performed using single register - read address
+is automatically incremented after performing the operation.
 
 `$D5E8` :
 
@@ -46,11 +48,16 @@ RAM region `$8000+512*<OFFSET>..$8000+512*(<OFFSET>+<SECTOR_COUNT>)-1`.
 
 * bit7..bit0 - `<SECTOR_NUM>` bits 31..24
 
-`$D5EF` :
+`$D5EF` (write):
 
-* bit5..bit0 - unused
-* bit6=1 - turn on cartridge memory `$8000..$9FFF`
-* bit7=1 - turn on cartridge memory `$A000..$BFFF`
+* bit4..bit0 - set `<READ_ADDRESS>` from $8000; measured in 512-byte blocks
+* bit5       - unused
+* bit6=1     - turn on cartridge memory `$8000..$9FFF`
+* bit7=1     - turn on cartridge memory `$A000..$BFFF`
+
+`$D5EF` (read):
+* bit7..bit0 - data in cartridge memory at current `<READ_ADDRESS>`; the
+               address is automatically incremented by 1 after read
 
 Example usage
 -------------
