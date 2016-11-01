@@ -1194,9 +1194,9 @@ com_loader
  sta $2E1
 
 s_segment_loop
- lda #<s_dummy_init
+ lda #<dummy_init
  sta $2E2
- lda #>s_dummy_init
+ lda #>dummy_init
  sta $2E3
  ; load header
  lda #4
@@ -1301,24 +1301,24 @@ done_seg
  lda file_size+2
  bne next_seg
  lda file_size+2
- beq s_run
+ beq do_run
 next_seg
  jmp s_segment_loop
 
  ; run from $2E0 or the 1st segment
-s_run
+do_run
  lda $2E0
- bne s_runad
+ bne run_2e0
  lda $2E1
- bne s_runad
+ bne run_2e0
  jmp (first_seg)
-s_runad
+run_2e0
  jmp ($2E0)
 
 jmp_init
  jmp ($2E2)
 
-s_dummy_init
+dummy_init
  rts
 
 load_byte
