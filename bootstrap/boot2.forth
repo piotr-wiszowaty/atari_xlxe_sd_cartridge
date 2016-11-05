@@ -1093,7 +1093,7 @@ internal2lowercase_done
   until
 
   1 sec-cnt c!
-  0 sec-offs c!
+  [ sec-buf1 $8000 - 512 / ] literal sec-offs c!
 
   \ run .com loader
   run-com
@@ -1347,7 +1347,7 @@ set_sec_num
  lda set_sec_num+2
  adc #0
  sta set_sec_num+2
- lda #0
+ lda $D5E9
  sta $D5EF
  lda #1
  sta $D5E8
