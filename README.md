@@ -50,7 +50,7 @@ is automatically incremented after performing the operation.
 
 `$D5EF` (write):
 
-* bit4..bit0 - set `<READ_ADDRESS>` from $8000; measured in 512-byte blocks
+* bit4..bit0 - set `<READ_ADDRESS>; measured in 512-byte blocks`from $8000
 * bit5       - unused
 * bit6=1     - turn on cartridge memory `$8000..$9FFF`
 * bit7=1     - turn on cartridge memory `$A000..$BFFF`
