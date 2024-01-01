@@ -1,0 +1,28 @@
+# PcbBOM Version 1.0
+# Date: Mon 01 Jan 2024 01:47:14 PM GMT UTC
+# Author: p
+# Title: (unknown) - PCB BOM
+# Quantity, Description, Value, RefDes
+# --------------------------------------------
+1,"atari_cart_conn-3","unknown",CONN2 
+1,"SO28W","unknown",U1 
+1,"JUMPER2","unknown",CONN1 
+2,"JUMPER6","unknown",CONN3 CONN8 
+4,"0805","100",R11 R10 R6 R5 
+3,"EIA B","10 uF",C5 C9 C3 
+10,"0805","100 nF",C1 C14 C15 C12 C13 C18 C17 C16 C6 C7 
+1,"TQFP100_14","unknown",U4 
+8,"0805","10 k",R12 R2 R1 R15 R14 R7 R8 R13 
+2,"0805","470",R4 R3 
+1,"LQFP48_7","unknown",U5 
+2,"JUMPER5","unknown",CONN6 CONN4 
+1,"0805","2.2 k",R9 
+1,"0805","unknown",L2 
+2,"0805","27 pF",C2 C8 
+1,"HC49-SMT","12 MHz",U6 
+1,"0805","0",R16 
+1,"TO-252","unknown",U3 
+1,"SD_Card_Socket","unknown",CONN9 
+1,"DS1031-09_10pin","unknown",CONN7 
+1,"0805","yellow",D2 
+1,"0805","red",D1 
